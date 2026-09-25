@@ -22,6 +22,10 @@ pub struct Token:
     pub var m_start_position: TokenPosition
     pub var m_end_position: TokenPosition
 
+## The non-zero default member initializers of Web::CSS::Parser::Token; the constructor runs them first.
+pub func token_init_fields(this: Token*):
+    this.m_hash_type = TokenHashType.unrestricted
+
 ## Web::CSS::Parser::Token::Type (Libraries/LibWeb/CSS/Parser/Token.h:30).
 pub enum TokenType as u8:
     invalid = 0

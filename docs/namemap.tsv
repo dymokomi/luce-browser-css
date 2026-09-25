@@ -170,6 +170,7 @@ Web::CSS::Parser::SubstitutionFunctionsPresence	luce-browser-css	css_syntax	Subs
 Web::CSS::Parser::SubstitutionFunctionsPresence::has_any	luce-browser-css	css_syntax	substitution_functions_presence_has_any	Libraries/LibWeb/CSS/Parser/Types.h:70	stub
 Web::CSS::Parser::TOKENIZER_EOF	luce-browser-css	css_syntax	tokenizer_eof	Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:21	variable
 Web::CSS::Parser::Token	luce-browser-css	css_syntax	Token	Libraries/LibWeb/CSS/Parser/Token.h:28	struct
+Web::CSS::Parser::Token [default member initializers]	luce-browser-css	css_syntax	token_init_fields	Libraries/LibWeb/CSS/Parser/Token.h:28	init fields
 Web::CSS::Parser::Token::HashType	luce-browser-css	css_syntax	TokenHashType	Libraries/LibWeb/CSS/Parser/Token.h:59	enum
 Web::CSS::Parser::Token::Position	luce-browser-css	css_syntax	TokenPosition	Libraries/LibWeb/CSS/Parser/Token.h:64	struct
 Web::CSS::Parser::Token::Type	luce-browser-css	css_syntax	TokenType	Libraries/LibWeb/CSS/Parser/Token.h:30	enum

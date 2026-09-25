@@ -105,11 +105,11 @@ pub func number_div(this: const Number*, other: Number) -> Number:
     trap("unported: Web::CSS::Number::operator/")
 
 ## Ported from Libraries/LibWeb/CSS/Number.cpp:31 Web::CSS::Number::serialize.
-pub func number_serialize(this: const Number*, builder: ak.StringBuilder*, arg1: SerializationMode):
+pub func number_serialize(this: const Number*, builder: ak.StringBuilder*, arg1: SerializationMode = SerializationMode.normal):
     trap("unported: Web::CSS::Number::serialize")
 
 ## Ported from Libraries/LibWeb/CSS/Number.cpp:52 Web::CSS::Number::to_string.
-pub func number_to_string(this: const Number*, mode: SerializationMode) -> ak.String:
+pub func number_to_string(this: const Number*, mode: SerializationMode = SerializationMode.normal) -> ak.String:
     trap("unported: Web::CSS::Number::to_string")
 
 ## Ported from Libraries/LibWeb/CSS/Number.h:81 Web::CSS::Number::operator==.
@@ -558,7 +558,7 @@ pub func tokenizer_next_code_point(this: Tokenizer*) -> u32:
     trap("unported: Web::CSS::Parser::Tokenizer::next_code_point")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:263 Web::CSS::Parser::Tokenizer::peek_code_point.
-pub func tokenizer_peek_code_point(this: const Tokenizer*, offset: usize) -> u32:
+pub func tokenizer_peek_code_point(this: const Tokenizer*, offset: usize = 0) -> u32:
     trap("unported: Web::CSS::Parser::Tokenizer::peek_code_point")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:274 Web::CSS::Parser::Tokenizer::peek_twin.
