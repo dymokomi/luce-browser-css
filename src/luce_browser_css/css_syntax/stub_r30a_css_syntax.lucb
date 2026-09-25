@@ -62,11 +62,11 @@ pub func round_to_nearest_integer(value: f64) -> i32:
 
 ## Ported from Libraries/LibWeb/CSS/Number.h:27 Web::CSS::Number::Number.
 pub func number_construct(this: Number*):
-    return
+    trap("unported: Web::CSS::Number::Number")
 
 ## Ported from Libraries/LibWeb/CSS/Number.h:32 Web::CSS::Number::Number.
 pub func number_construct_number_type(this: Number*, type_: NumberType, value: f64):
-    return
+    trap("unported: Web::CSS::Number::Number")
 
 ## Ported from Libraries/LibWeb/CSS/Number.h:38 Web::CSS::Number::type.
 pub func number_type(this: const Number*) -> NumberType:
@@ -122,19 +122,19 @@ pub func number_cmp(this: const Number*, other: Number) -> i32:
 
 ## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:12 Web::CSS::Parser::ComponentValue::ComponentValue.
 pub func component_value_construct_token(this: ComponentValue*, token: Token):
-    return
+    trap("unported: Web::CSS::Parser::ComponentValue::ComponentValue")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:16 Web::CSS::Parser::ComponentValue::ComponentValue.
 pub func component_value_construct_function(this: ComponentValue*, function: Function):
-    return
+    trap("unported: Web::CSS::Parser::ComponentValue::ComponentValue")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:20 Web::CSS::Parser::ComponentValue::ComponentValue.
 pub func component_value_construct_simple_block(this: ComponentValue*, block: SimpleBlock):
-    return
+    trap("unported: Web::CSS::Parser::ComponentValue::ComponentValue")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:24 Web::CSS::Parser::ComponentValue::ComponentValue.
 pub func component_value_construct_guaranteed_invalid_value(this: ComponentValue*, invalid: GuaranteedInvalidValue):
-    return
+    trap("unported: Web::CSS::Parser::ComponentValue::ComponentValue")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:31 Web::CSS::Parser::ComponentValue::is_block.
 pub func component_value_is_block(this: const ComponentValue*) -> bool:
@@ -370,7 +370,7 @@ pub func token_end_position(this: const Token*) -> TokenPosition:
     return this.m_end_position
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:421 Web::CSS::Parser::Token::set_position_range.
-pub func token_set_position_range(this: Token*, start: TokenPosition, start_: TokenPosition):
+pub func token_set_position_range(this: Token*, start: TokenPosition, end: TokenPosition):
     trap("unported: Web::CSS::Parser::Token::set_position_range")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Token.h:191 Web::CSS::Parser::Token::operator==.
@@ -379,11 +379,11 @@ pub func token_eq(this: const Token*, other: Token) -> bool:
 
 ## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:58 Web::CSS::Parser::TokenStream::TokenStream<T>.
 pub func token_stream_construct_span_t[T](this: TokenStream[T]*, tokens: const T[]):
-    return
+    trap("unported: Web::CSS::Parser::TokenStream::TokenStream<T>")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:64 Web::CSS::Parser::TokenStream::TokenStream<T>.
 pub func token_stream_construct_vector[T](this: TokenStream[T]*, tokens: ak.Vector[T]):
-    return
+    trap("unported: Web::CSS::Parser::TokenStream::TokenStream<T>")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:70 Web::CSS::Parser::TokenStream::of_single_token.
 pub func token_stream_of_single_token[T](token: T) -> TokenStream[T]:
@@ -534,7 +534,7 @@ pub func is_plus_sign(code_point: u32) -> bool:
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:221 Web::CSS::Parser::Tokenizer::Tokenizer.
 pub func tokenizer_construct(this: Tokenizer*, decoded_input: ak.String):
-    return
+    trap("unported: Web::CSS::Parser::Tokenizer::Tokenizer")
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:228 Web::CSS::Parser::Tokenizer::tokenize.
 pub func tokenizer_tokenize(this: Tokenizer*) -> ak.Vector[Token]:
