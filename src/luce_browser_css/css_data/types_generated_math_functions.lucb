@@ -1,0 +1,36 @@
+#==============================================================================================
+#
+#   types_generated_math_functions - declarations of Build/Libraries/LibWeb/CSS/MathFunctions.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/MathFunctions.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+## Web::CSS::MathFunction (Build/Libraries/LibWeb/CSS/MathFunctions.h:11).
+pub enum MathFunction as i32:
+    calc = 0
+    abs = 1
+    acos = 2
+    asin = 3
+    atan = 4
+    atan2 = 5
+    clamp = 6
+    cos = 7
+    exp = 8
+    hypot = 9
+    log = 10
+    max = 11
+    min = 12
+    mod = 13
+    pow = 14
+    random = 15
+    rem = 16
+    round = 17
+    sign = 18
+    sin = 19
+    sqrt = 20
+    tan = 21

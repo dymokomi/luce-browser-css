@@ -1,0 +1,29 @@
+#==============================================================================================
+#
+#   types_generated_environment_variable - declarations of Build/Libraries/LibWeb/CSS/EnvironmentVariable.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/EnvironmentVariable.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+## Web::CSS::EnvironmentVariable (Build/Libraries/LibWeb/CSS/EnvironmentVariable.h:10).
+pub enum EnvironmentVariable as u8:
+    preferred_text_scale = 0
+    safe_area_inset_bottom = 1
+    safe_area_inset_left = 2
+    safe_area_inset_right = 3
+    safe_area_inset_top = 4
+    safe_area_max_inset_bottom = 5
+    safe_area_max_inset_left = 6
+    safe_area_max_inset_right = 7
+    safe_area_max_inset_top = 8
+    viewport_segment_bottom = 9
+    viewport_segment_height = 10
+    viewport_segment_left = 11
+    viewport_segment_right = 12
+    viewport_segment_top = 13
+    viewport_segment_width = 14

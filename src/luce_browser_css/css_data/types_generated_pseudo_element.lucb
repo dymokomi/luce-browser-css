@@ -1,0 +1,51 @@
+#==============================================================================================
+#
+#   types_generated_pseudo_element - declarations of Build/Libraries/LibWeb/CSS/PseudoElement.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/PseudoElement.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+## Web::CSS::PseudoElement (Build/Libraries/LibWeb/CSS/PseudoElement.h:11).
+pub enum PseudoElement as u8:
+    after = 0
+    backdrop = 1
+    before = 2
+    details_content = 3
+    file_selector_button = 4
+    first_letter = 5
+    first_line = 6
+    marker = 7
+    part = 8
+    placeholder = 9
+    selection = 10
+    slider_fill = 11
+    slider_thumb = 12
+    slider_track = 13
+    slotted = 14
+    view_transition = 15
+    view_transition_group = 16
+    view_transition_image_pair = 17
+    view_transition_new = 18
+    view_transition_old = 19
+    known_pseudo_element_count = 20
+    unknown_web_kit = 21
+
+# mark: PseudoElementMetadata ===================================================================
+
+## Web::CSS::PseudoElementMetadata (Build/Libraries/LibWeb/CSS/PseudoElement.h:48).
+pub struct PseudoElementMetadata:
+    pub var parameter_type: PseudoElementMetadataParameterType
+    pub var is_valid_as_function: bool
+    pub var is_valid_as_identifier: bool
+
+## Web::CSS::PseudoElementMetadata::ParameterType (Build/Libraries/LibWeb/CSS/PseudoElement.h:49).
+pub enum PseudoElementMetadataParameterType as i32:
+    none_ = 0
+    compound_selector = 1
+    ident_list = 2
+    pt_name_selector = 3

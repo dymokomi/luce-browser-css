@@ -1,0 +1,18 @@
+#==============================================================================================
+#
+#   types_component_value - declarations of Libraries/LibWeb/CSS/Parser/ComponentValue.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Libraries/LibWeb/CSS/Parser/ComponentValue.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+# mark: ComponentValue ==========================================================================
+
+## Web::CSS::Parser::ComponentValue (Libraries/LibWeb/CSS/Parser/ComponentValue.h:20).
+pub struct ComponentValue:
+    pub var m_value: TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue
+    pub var m_attr_tainted: bool  # C++ default: { false }

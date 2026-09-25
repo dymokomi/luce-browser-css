@@ -1,0 +1,57 @@
+#==============================================================================================
+#
+#   types_generated_transform_functions - declarations of Build/Libraries/LibWeb/CSS/TransformFunctions.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/TransformFunctions.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+## Web::CSS::TransformFunction (Build/Libraries/LibWeb/CSS/TransformFunctions.h:10).
+pub enum TransformFunction as i32:
+    matrix = 0
+    matrix3_d = 1
+    perspective = 2
+    translate = 3
+    translate3_d = 4
+    translate_x = 5
+    translate_y = 6
+    translate_z = 7
+    scale = 8
+    scale3_d = 9
+    scale_x = 10
+    scale_y = 11
+    scale_z = 12
+    rotate = 13
+    rotate3_d = 14
+    rotate_x = 15
+    rotate_y = 16
+    rotate_z = 17
+    skew = 18
+    skew_x = 19
+    skew_y = 20
+
+## Web::CSS::TransformFunctionParameterType (Build/Libraries/LibWeb/CSS/TransformFunctions.h:36).
+pub enum TransformFunctionParameterType as i32:
+    angle = 0
+    length = 1
+    length_none = 2
+    length_percentage = 3
+    number = 4
+    number_percentage = 5
+
+# mark: TransformFunctionParameter ==============================================================
+
+## Web::CSS::TransformFunctionParameter (Build/Libraries/LibWeb/CSS/TransformFunctions.h:45).
+pub struct TransformFunctionParameter:
+    pub var type_: TransformFunctionParameterType
+    pub var required: bool
+
+# mark: TransformFunctionMetadata ===============================================================
+
+## Web::CSS::TransformFunctionMetadata (Build/Libraries/LibWeb/CSS/TransformFunctions.h:50).
+pub struct TransformFunctionMetadata:
+    pub var parameters: ak.Vector[TransformFunctionParameter]

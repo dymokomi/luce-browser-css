@@ -1,0 +1,102 @@
+#==============================================================================================
+#
+#   types_generated_pseudo_class - declarations of Build/Libraries/LibWeb/CSS/PseudoClass.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/PseudoClass.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+## Web::CSS::PseudoClass (Build/Libraries/LibWeb/CSS/PseudoClass.h:9).
+pub enum PseudoClass as i32:
+    active = 0
+    any_link = 1
+    autofill = 2
+    buffering = 3
+    checked = 4
+    default = 5
+    defined = 6
+    dir = 7
+    disabled = 8
+    empty = 9
+    enabled = 10
+    even_less_good_value = 11
+    first_child = 12
+    first_of_type = 13
+    focus = 14
+    focus_visible = 15
+    focus_within = 16
+    fullscreen = 17
+    has = 18
+    heading = 19
+    high_value = 20
+    host = 21
+    hover = 22
+    indeterminate = 23
+    invalid = 24
+    is = 25
+    lang = 26
+    last_child = 27
+    last_of_type = 28
+    link = 29
+    local_link = 30
+    low_value = 31
+    modal = 32
+    muted = 33
+    not_ = 34
+    nth_child = 35
+    nth_last_child = 36
+    nth_last_of_type = 37
+    nth_of_type = 38
+    only_child = 39
+    only_of_type = 40
+    open = 41
+    optimal_value = 42
+    optional = 43
+    popover_open = 44
+    paused = 45
+    placeholder_shown = 46
+    playing = 47
+    read_only = 48
+    read_write = 49
+    required = 50
+    root = 51
+    scope = 52
+    seeking = 53
+    stalled = 54
+    state = 55
+    suboptimal_value = 56
+    target = 57
+    unchecked = 58
+    user_invalid = 59
+    user_valid = 60
+    valid = 61
+    visited = 62
+    volume_locked = 63
+    where = 64
+    count = 65
+
+# mark: PseudoClassMetadata =====================================================================
+
+## Web::CSS::PseudoClassMetadata (Build/Libraries/LibWeb/CSS/PseudoClass.h:82).
+pub struct PseudoClassMetadata:
+    pub var parameter_type: PseudoClassMetadataParameterType
+    pub var is_valid_as_function: bool
+    pub var is_valid_as_identifier: bool
+
+## Web::CSS::PseudoClassMetadata::ParameterType (Build/Libraries/LibWeb/CSS/PseudoClass.h:83).
+pub enum PseudoClassMetadataParameterType as i32:
+    none_ = 0
+    an_plus_b = 1
+    an_plus_b_of = 2
+    compound_selector = 3
+    forgiving_selector_list = 4
+    forgiving_relative_selector_list = 5
+    ident = 6
+    language_ranges = 7
+    level_list = 8
+    relative_selector_list = 9
+    selector_list = 10

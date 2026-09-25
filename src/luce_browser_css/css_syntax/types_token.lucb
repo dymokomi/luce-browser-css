@@ -1,0 +1,64 @@
+#==============================================================================================
+#
+#   types_token - declarations of Libraries/LibWeb/CSS/Parser/Token.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Libraries/LibWeb/CSS/Parser/Token.h (Ladybird 47c82b38d0) by the skeleton generator
+#       (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the generator
+#       could not map.
+#
+#==============================================================================================
+
+# mark: Token ===================================================================================
+
+## Web::CSS::Parser::Token (Libraries/LibWeb/CSS/Parser/Token.h:28).
+pub struct Token:
+    pub var m_type: TokenType  # C++ default: { Type :: Invalid }
+    pub var m_value: ak.FlyString
+    pub var m_number_value: Number
+    pub var m_hash_type: TokenHashType  # C++ default: { HashType :: Unrestricted }
+    pub var m_original_source_text: ak.String
+    pub var m_start_position: TokenPosition
+    pub var m_end_position: TokenPosition
+
+## Web::CSS::Parser::Token::Type (Libraries/LibWeb/CSS/Parser/Token.h:30).
+pub enum TokenType as u8:
+    invalid = 0
+    end_of_file = 1
+    ident = 2
+    function = 3
+    at_keyword = 4
+    hash_ = 5
+    string = 6
+    bad_string = 7
+    url = 8
+    bad_url = 9
+    delim = 10
+    number = 11
+    percentage = 12
+    dimension = 13
+    whitespace = 14
+    cdo = 15
+    cdc = 16
+    colon = 17
+    semicolon = 18
+    comma = 19
+    open_square = 20
+    close_square = 21
+    open_paren = 22
+    close_paren = 23
+    open_curly = 24
+    close_curly = 25
+
+## Web::CSS::Parser::Token::HashType (Libraries/LibWeb/CSS/Parser/Token.h:59).
+pub enum TokenHashType as u8:
+    id = 0
+    unrestricted = 1
+
+# mark: TokenPosition ===========================================================================
+
+## Web::CSS::Parser::Token::Position (Libraries/LibWeb/CSS/Parser/Token.h:64).
+pub struct TokenPosition:
+    pub var line: usize  # C++ default: { 0 }
+    pub var column: usize  # C++ default: { 0 }

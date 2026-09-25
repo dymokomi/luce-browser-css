@@ -1,0 +1,71 @@
+#==============================================================================================
+#
+#   types_types - declarations of Libraries/LibWeb/CSS/Parser/Types.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Libraries/LibWeb/CSS/Parser/Types.h (Ladybird 47c82b38d0) by the skeleton generator
+#       (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the generator
+#       could not map.
+#
+#==============================================================================================
+
+# mark: AtRule ==================================================================================
+
+## Web::CSS::Parser::AtRule (Libraries/LibWeb/CSS/Parser/Types.h:31).
+pub struct AtRule:
+    pub var name: ak.FlyString
+    pub var prelude: ak.Vector[ComponentValue]
+    pub var child_rules_and_lists_of_declarations: ak.Vector[RuleOrListOfDeclarations]
+    pub var is_block_rule: bool  # C++ default: { false }
+
+# mark: QualifiedRule ===========================================================================
+
+## Web::CSS::Parser::QualifiedRule (Libraries/LibWeb/CSS/Parser/Types.h:46).
+pub struct QualifiedRule:
+    pub var prelude: ak.Vector[ComponentValue]
+    pub var declarations: ak.Vector[Declaration]
+    pub var child_rules: ak.Vector[RuleOrListOfDeclarations]
+
+# mark: Declaration =============================================================================
+
+## Web::CSS::Parser::Declaration (Libraries/LibWeb/CSS/Parser/Types.h:55).
+pub struct Declaration:
+    pub var name: ak.FlyString
+    pub var value: ak.Vector[ComponentValue]
+    pub var important: Important  # C++ default: Important :: No
+    pub var original_value_text: ak.String?  # C++ default: { }
+    pub var original_full_text: ak.String?  # C++ default: { }
+
+# mark: SubstitutionFunctionsPresence ===========================================================
+
+## Web::CSS::Parser::SubstitutionFunctionsPresence (Libraries/LibWeb/CSS/Parser/Types.h:63).
+pub struct SubstitutionFunctionsPresence:
+    pub var attr: bool  # C++ default: { false }
+    pub var env: bool  # C++ default: { false }
+    pub var if_: bool  # C++ default: { false }
+    pub var inherit: bool  # C++ default: { false }
+    pub var var_: bool  # C++ default: { false }
+
+# mark: SimpleBlock =============================================================================
+
+## Web::CSS::Parser::SimpleBlock (Libraries/LibWeb/CSS/Parser/Types.h:74).
+pub struct SimpleBlock:
+    pub var token: Token
+    pub var value: ak.Vector[ComponentValue]
+    pub var end_token: Token  # C++ default: { }
+
+# mark: Function ================================================================================
+
+## Web::CSS::Parser::Function (Libraries/LibWeb/CSS/Parser/Types.h:90).
+pub struct Function:
+    pub var name: ak.FlyString
+    pub var value: ak.Vector[ComponentValue]
+    pub var name_token: Token  # C++ default: { }
+    pub var end_token: Token  # C++ default: { }
+
+# mark: GuaranteedInvalidValue ==================================================================
+
+## Web::CSS::Parser::GuaranteedInvalidValue (Libraries/LibWeb/CSS/Parser/Types.h:103).
+pub struct GuaranteedInvalidValue:
+    pub var empty_: u8

@@ -1,0 +1,59 @@
+#==============================================================================================
+#
+#   types_generated_media_feature_id - declarations of Build/Libraries/LibWeb/CSS/MediaFeatureID.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/MediaFeatureID.h (Ladybird 47c82b38d0) by the skeleton
+#       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
+#       generator could not map.
+#
+#==============================================================================================
+
+## Web::CSS::MediaFeatureValueType (Build/Libraries/LibWeb/CSS/MediaFeatureID.h:9).
+pub enum MediaFeatureValueType as i32:
+    boolean = 0
+    integer = 1
+    length = 2
+    ratio = 3
+    resolution = 4
+
+## Web::CSS::MediaFeatureID (Build/Libraries/LibWeb/CSS/MediaFeatureID.h:17).
+pub enum MediaFeatureId as u8:
+    any_hover = 0
+    any_pointer = 1
+    aspect_ratio = 2
+    color = 3
+    color_gamut = 4
+    color_index = 5
+    device_aspect_ratio = 6
+    device_height = 7
+    device_width = 8
+    display_mode = 9
+    dynamic_range = 10
+    environment_blending = 11
+    forced_colors = 12
+    grid = 13
+    height = 14
+    horizontal_viewport_segments = 15
+    hover = 16
+    inverted_colors = 17
+    monochrome = 18
+    nav_controls = 19
+    orientation = 20
+    overflow_block = 21
+    overflow_inline = 22
+    pointer = 23
+    prefers_color_scheme = 24
+    prefers_contrast = 25
+    prefers_reduced_data = 26
+    prefers_reduced_motion = 27
+    prefers_reduced_transparency = 28
+    resolution = 29
+    scan = 30
+    scripting = 31
+    update = 32
+    vertical_viewport_segments = 33
+    video_color_gamut = 34
+    video_dynamic_range = 35
+    width = 36

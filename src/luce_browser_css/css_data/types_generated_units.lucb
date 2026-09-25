@@ -1,0 +1,94 @@
+#==============================================================================================
+#
+#   types_generated_units - declarations of Build/Libraries/LibWeb/CSS/Units.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Build/Libraries/LibWeb/CSS/Units.h (Ladybird 47c82b38d0) by the skeleton generator
+#       (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the generator
+#       could not map.
+#
+#==============================================================================================
+
+## Web::CSS::DimensionType (Build/Libraries/LibWeb/CSS/Units.h:8).
+pub enum DimensionType as u8:
+    angle = 0
+    flex = 1
+    frequency = 2
+    length = 3
+    resolution = 4
+    time = 5
+
+## Web::CSS::AngleUnit (Build/Libraries/LibWeb/CSS/Units.h:20).
+pub enum AngleUnit as u8:
+    deg = 0
+    grad = 1
+    rad = 2
+    turn = 3
+
+## Web::CSS::FlexUnit (Build/Libraries/LibWeb/CSS/Units.h:33).
+pub enum FlexUnit as u8:
+    fr = 0
+
+## Web::CSS::FrequencyUnit (Build/Libraries/LibWeb/CSS/Units.h:43).
+pub enum FrequencyUnit as u8:
+    hz = 0
+    k_hz = 1
+
+## Web::CSS::LengthUnit (Build/Libraries/LibWeb/CSS/Units.h:54).
+pub enum LengthUnit as u8:
+    cap = 0
+    ch = 1
+    cm = 2
+    dvb = 3
+    dvh = 4
+    dvi = 5
+    dvmax = 6
+    dvmin = 7
+    dvw = 8
+    em = 9
+    ex = 10
+    ic = 11
+    in_ = 12
+    lh = 13
+    lvb = 14
+    lvh = 15
+    lvi = 16
+    lvmax = 17
+    lvmin = 18
+    lvw = 19
+    mm = 20
+    pc = 21
+    pt = 22
+    px = 23
+    q = 24
+    rcap = 25
+    rch = 26
+    rem = 27
+    rex = 28
+    ric = 29
+    rlh = 30
+    svb = 31
+    svh = 32
+    svi = 33
+    svmax = 34
+    svmin = 35
+    svw = 36
+    vb = 37
+    vh = 38
+    vi = 39
+    vmax = 40
+    vmin = 41
+    vw = 42
+
+## Web::CSS::ResolutionUnit (Build/Libraries/LibWeb/CSS/Units.h:106).
+pub enum ResolutionUnit as u8:
+    dpcm = 0
+    dpi = 1
+    dppx = 2
+    x = 3
+
+## Web::CSS::TimeUnit (Build/Libraries/LibWeb/CSS/Units.h:119).
+pub enum TimeUnit as u8:
+    ms = 0
+    s = 1

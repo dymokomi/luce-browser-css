@@ -1,0 +1,40 @@
+#==============================================================================================
+#
+#   types_tokenizer - declarations of Libraries/LibWeb/CSS/Parser/Tokenizer.h
+#
+#   DESCRIPTION:
+#       Structs, enums, vtables, class information and cast helpers generated from
+#       Libraries/LibWeb/CSS/Parser/Tokenizer.cpp, Libraries/LibWeb/CSS/Parser/Tokenizer.h
+#       (Ladybird 47c82b38d0) by the skeleton generator (DESIGN.md §4.4). Regenerate rather
+#       than edit, except to fill a field the generator could not map.
+#
+#==============================================================================================
+
+# mark: U32Twin =================================================================================
+
+## Web::CSS::Parser::U32Twin (Libraries/LibWeb/CSS/Parser/Tokenizer.h:20).
+pub struct U32Twin:
+    pub var first: u32  # C++ default: { }
+    pub var second: u32  # C++ default: { }
+
+## Web::CSS::Parser::TOKENIZER_EOF (Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:21).
+pub let tokenizer_eof: u32 = 0xffffffff
+
+# mark: U32Triplet ==============================================================================
+
+## Web::CSS::Parser::U32Triplet (Libraries/LibWeb/CSS/Parser/Tokenizer.h:34).
+pub struct U32Triplet:
+    pub var first: u32  # C++ default: { }
+    pub var second: u32  # C++ default: { }
+    pub var third: u32  # C++ default: { }
+
+# mark: Tokenizer ===============================================================================
+
+## Web::CSS::Parser::Tokenizer (Libraries/LibWeb/CSS/Parser/Tokenizer.h:61).
+pub struct Tokenizer:
+    pub var m_decoded_input: ak.String
+    pub var m_utf8_view: ak.Utf8View
+    pub var m_utf8_iterator: ak.Utf8CodePointIterator
+    pub var m_prev_utf8_iterator: ak.Utf8CodePointIterator
+    pub var m_position: TokenPosition
+    pub var m_prev_position: TokenPosition
