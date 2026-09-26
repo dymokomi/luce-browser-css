@@ -1,0 +1,386 @@
+#==============================================================================================
+#
+#   tests_token - Token, Number and serialization, pinned to the donor
+#
+#   DESCRIPTION:
+#       The donor has no unit test for these files, so the expected values come from a local
+#       probe program built against the reference Ladybird (Token::to_debug_string,
+#       Token::to_string, Number::to_string, round_to_nearest_integer, and the
+#       identifier/string/URL serialization through Token::to_string). The probe itself is
+#       not in the repository; its outputs are the tables at the end of this fragment.
+#
+#==============================================================================================
+
+# mark: Helpers =================================================================================
+
+## `text` as a String.
+func test_string(text: str) -> ak.String:
+    return ak.string_from_str(text)
+
+## Whether `string` holds exactly `text`.
+func string_is(string: const ak.String*, text: str) -> bool:
+    return ak.string_view_text(ak.string_bytes_as_string_view(string)) == text
+
+## Asserts `string` holds `text`, printing both when it does not.
+func expect_string(string: const ak.String*, text: str):
+    if not string_is(string, text):
+        print(f"expected: {text}")
+        print(f"actual:   {ak.string_view_text(ak.string_bytes_as_string_view(string))}")
+        assert(false, "string mismatch")
+
+## Tokenizes `input` and checks `to_debug_string|to_string` of every token against `expected`.
+func check_token_strings(input: str, expected: const str[]):
+    let tokens = tokenizer_tokenize_string_view(ak.sv(input), ak.sv("utf-8"))
+    let span = ak.vector_span_const(&tokens)
+    assert(span.length == expected.length, "token count")
+    for index in 0..<span.length:
+        var builder = ak.string_builder_new()
+        let debug_string = token_to_debug_string(&span[index])
+        string_builder_append_string(&builder, &debug_string)
+        ak.string_builder_append_u8(&builder, '|')
+        let string = token_to_string(&span[index])
+        string_builder_append_string(&builder, &string)
+        let line = ak.string_builder_to_string_without_validation(&builder)
+        expect_string(&line, expected[index])
+
+# mark: Tests ===================================================================================
+
+noinline func test_token_to_string_1():
+    check_token_strings(to_string_input_1, to_string_expected_1)
+
+test "Token::to_string and to_debug_string over every token type":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_token_to_string_1()
+
+noinline func test_token_to_string_2():
+    check_token_strings(to_string_input_2, to_string_expected_2)
+
+test "Token::to_string: control characters, clamped numbers, escapes":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_token_to_string_2()
+
+noinline func test_number_serialization():
+    let values = number_serialization_values()
+    for index in 0..<values.length:
+        let value = values[index]
+        var builder = ak.string_builder_new()
+        let kinds: NumberType[3] = [NumberType.number, NumberType.integer, NumberType.integer_with_explicit_sign]
+        for kind in kinds:
+            let number = number_create(kind, value)
+            let string = number_to_string(&number)
+            string_builder_append_string(&builder, &string)
+            ak.string_builder_append_u8(&builder, '|')
+        let number_token = token_create_number(number_create(NumberType.number, value), ak.string_new())
+        let number_string = token_to_string(&number_token)
+        string_builder_append_string(&builder, &number_string)
+        ak.string_builder_append_u8(&builder, '|')
+        let percentage_token = token_create_percentage(number_create(NumberType.number, value), ak.string_new())
+        let percentage_string = token_to_string(&percentage_token)
+        string_builder_append_string(&builder, &percentage_string)
+        let line = ak.string_builder_to_string_without_validation(&builder)
+        expect_string(&line, number_serialization_expected[index])
+
+    let specials: Number[4] = [
+        number_create(NumberType.number, math.infinity),
+        number_create(NumberType.number, -math.infinity),
+        number_create(NumberType.number, math.nan),
+        number_create(NumberType.integer_with_explicit_sign, math.infinity),
+    ]
+    for index in 0..<specials.length:
+        let string = number_to_string(&specials[index])
+        expect_string(&string, number_special_expected[index])
+
+test "Number::to_string and serialize_a_number":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_number_serialization()
+
+noinline func test_round_to_nearest_integer():
+    let values: f64[10] = [0.5, -0.5, 1.5, -1.5, 2.4999, 1e10, -1e10, math.nan, math.infinity, -math.infinity]
+    for index in 0..<values.length:
+        assert(round_to_nearest_integer(values[index]) == round_expected[index])
+
+test "round_to_nearest_integer":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_round_to_nearest_integer()
+
+noinline func test_number_arithmetic():
+    let two = number_create(NumberType.integer, 2.0)
+    let three = number_create(NumberType.integer_with_explicit_sign, 3.0)
+    let half = number_create(NumberType.number, 0.5)
+    let sum = number_add(&two, three)
+    assert(number_type(&sum) == NumberType.integer and number_value(&sum) == 5.0)
+    let difference = number_sub(&two, half)
+    assert(number_type(&difference) == NumberType.number and number_value(&difference) == 1.5)
+    let product = number_mul(&two, three)
+    assert(number_type(&product) == NumberType.integer and number_value(&product) == 6.0)
+    # Division is always a Number, even of two integers.
+    let quotient = number_div(&three, two)
+    assert(number_type(&quotient) == NumberType.number and number_value(&quotient) == 1.5)
+    assert(number_is_integer(&three) and number_is_integer_with_explicit_sign(&three))
+    assert(not number_is_integer(&half))
+    let two_and_a_half = number_create(NumberType.number, 2.5)
+    assert(number_integer_value(&two_and_a_half) == 3)
+    assert(number_eq(&two, number_create(NumberType.integer, 2.0)))
+    assert(not number_eq(&two, number_create(NumberType.number, 2.0)))
+    assert(number_cmp(&two, three) == -1 and number_cmp(&three, two) == 1 and number_cmp(&two, number_create(NumberType.number, 2.0)) == 0)
+    var zero = number_create(NumberType.integer, 7.0)
+    number_construct(&zero)
+    assert(number_type(&zero) == NumberType.number and number_value(&zero) == 0.0)
+
+test "Number arithmetic, comparison and integer conversion":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_number_arithmetic()
+
+noinline func test_identifier_serialization():
+    for index in 0..<serialization_names.length:
+        let name = ak.fly_string_from_str(serialization_names[index])
+        let tokens: Token[6] = [
+            token_create_ident(name, ak.string_new()),
+            token_create_string(name, ak.string_new()),
+            token_create_url(name, ak.string_new()),
+            token_create_function(name, ak.string_new()),
+            token_create_at_keyword(name, ak.string_new()),
+            token_create_hash(name, TokenHashType.id, ak.string_new()),
+        ]
+        var builder = ak.string_builder_new()
+        for token_index in 0..<tokens.length:
+            if token_index > 0:
+                ak.string_builder_append_u8(&builder, ' ')
+            ak.string_builder_append_u8(&builder, '[')
+            let string = token_to_string(&tokens[token_index])
+            string_builder_append_string(&builder, &string)
+            ak.string_builder_append_u8(&builder, ']')
+        let line = ak.string_builder_to_string_without_validation(&builder)
+        expect_string(&line, serialization_expected[index])
+
+    # The String forms of the serializers answer what the builder forms append.
+    let identifier = serialize_an_identifier_string_view(ak.sv("-1a"))
+    expect_string(&identifier, "-\\31 a")
+    let string = serialize_a_string_string_view(ak.sv("a\"b"))
+    expect_string(&string, "\"a\\\"b\"")
+    let url = serialize_a_url_string_view(ak.sv("x"))
+    expect_string(&url, "url(\"x\")")
+    let number = serialize_a_number_f64(1.0 / 3.0)
+    expect_string(&number, "0.333333")
+
+test "serialize an identifier, a string and a URL":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_identifier_serialization()
+
+noinline func test_token_accessors():
+    let dimension = token_create_dimension_f64(1e40, ak.fly_string_from_str("px"), test_string("1e40px"))
+    # Token values are clamped to single precision when read.
+    assert(token_dimension_value(&dimension) == (f64)ak.f32_max)
+    assert(token_dimension_value_int(&dimension) == ak.i32_max)
+    assert(not token_is_integer(&dimension))
+    let negative = token_create_number(number_create(NumberType.integer, -1e40), ak.string_new())
+    assert(token_number_value(&negative) == (f64)ak.f32_lowest)
+    assert(token_to_integer(&negative) == ak.i32_min)
+    let delim = token_create_delim(0x2f, ak.string_new())
+    assert(token_delim(&delim) == 0x2f)
+    let open = token_create(TokenType.open_square, ak.string_new())
+    assert(token_mirror_variant(&open) == TokenType.close_square)
+    assert(ak.string_view_text(token_bracket_string(&open)) == "[")
+    assert(ak.string_view_text(token_bracket_mirror_string(&open)) == "]")
+    let ident = token_create_ident(ak.fly_string_from_str("a"), ak.string_new())
+    assert(token_mirror_variant(&ident) == TokenType.invalid)
+    assert(ak.string_view_text(token_bracket_string(&ident)) == "")
+    # operator== ignores the source text and positions.
+    var other = token_create_ident(ak.fly_string_from_str("a"), test_string("a"))
+    token_set_position_range(&other, TokenPosition(line = 1, column = 2), TokenPosition(line = 1, column = 3))
+    assert(token_eq(&ident, other))
+    let start = token_start_position(&other)
+    let end = token_end_position(&other)
+    assert(start.column == 2 and end.column == 3)
+    assert(not token_eq(&ident, token_create_ident(ak.fly_string_from_str("b"), ak.string_new())))
+    assert(not token_eq(&ident, token_create_function(ak.fly_string_from_str("a"), ak.string_new())))
+    let hash_token = token_create_hash(ak.fly_string_from_str("x"), TokenHashType.unrestricted, ak.string_new())
+    assert(token_hash_type(&hash_token) == TokenHashType.unrestricted)
+    let default_token = token_new()
+    assert(token_type(&default_token) == TokenType.invalid and token_hash_type_raw(&default_token) == TokenHashType.unrestricted)
+    let eof = tokenizer_create_eof_token()
+    assert(token_is(&eof, TokenType.end_of_file))
+    let eof_source = token_original_source_text(&eof)
+    expect_string(&eof_source, "")
+
+## The token's hash type without Token::hash_type's VERIFY (for the default token).
+func token_hash_type_raw(token: const Token*) -> TokenHashType:
+    return token.m_hash_type
+
+test "Token accessors, clamping, brackets and equality":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_token_accessors()
+
+# mark: Tables from the donor ===================================================================
+
+## Tokenizer input 1 of the local probe (Token::to_debug_string and Token::to_string).
+let to_string_input_1: str = "a -b --c \\31 x #id #1x @media f( url(a b) url(  x  ) url(\"q\") 'str\"' \"x\\\\y\" 12 -3.5 +4 1e3 50% 2.5px 7EM < ! ~ . , : ; [ ] ( ) { } <!-- --> \\\n bad\"\n"
+
+## `to_debug_string|to_string` of each token of to_string_input_1, from the donor.
+let to_string_expected_1: str[78] = [
+    "Ident(value=\"a\", source=\"a\", start=0:0, end=0:1)|a",
+    "Whitespace(source=\" \", start=0:1, end=0:2)| ",
+    "Ident(value=\"-b\", source=\"-b\", start=0:2, end=0:4)|-b",
+    "Whitespace(source=\" \", start=0:4, end=0:5)| ",
+    "Ident(value=\"--c\", source=\"--c\", start=0:5, end=0:8)|--c",
+    "Whitespace(source=\" \", start=0:8, end=0:9)| ",
+    "Ident(value=\"1x\", source=\"\\\\31 x\", start=0:9, end=0:14)|\\31 x",
+    "Whitespace(source=\" \", start=0:14, end=0:15)| ",
+    "Hash(value=\"id\", hash_type=Id, source=\"#id\", start=0:15, end=0:18)|#id",
+    "Whitespace(source=\" \", start=0:18, end=0:19)| ",
+    "Hash(value=\"1x\", hash_type=Unrestricted, source=\"#1x\", start=0:19, end=0:22)|#1x",
+    "Whitespace(source=\" \", start=0:22, end=0:23)| ",
+    "AtKeyword(value=\"media\", source=\"@media\", start=0:23, end=0:29)|@media",
+    "Whitespace(source=\" \", start=0:29, end=0:30)| ",
+    "Function(value=\"f\", source=\"f(\", start=0:30, end=0:32)|f(",
+    "Whitespace(source=\" \", start=0:32, end=0:33)| ",
+    "BadUrl(source=\"url(a b)\", start=0:33, end=0:41)|url()",
+    "Whitespace(source=\" \", start=0:41, end=0:42)| ",
+    "Url(value=\"x\", source=\"url(  x  )\", start=0:42, end=0:52)|url(\"x\")",
+    "Whitespace(source=\" \", start=0:52, end=0:53)| ",
+    "Function(value=\"url\", source=\"url(\", start=0:53, end=0:57)|url(",
+    "String(value=\"q\", source=\"\\\"q\\\"\", start=0:57, end=0:60)|\"q\"",
+    "CloseParen(source=\")\", start=0:60, end=0:61)|)",
+    "Whitespace(source=\" \", start=0:61, end=0:62)| ",
+    "String(value=\"str\\\"\", source=\"'str\\\"'\", start=0:62, end=0:68)|\"str\\\"\"",
+    "Whitespace(source=\" \", start=0:68, end=0:69)| ",
+    "String(value=\"x\\\\y\", source=\"\\\"x\\\\\\\\y\\\"\", start=0:69, end=0:75)|\"x\\\\y\"",
+    "Whitespace(source=\" \", start=0:75, end=0:76)| ",
+    "Number(value=12, number_type=Integer, source=\"12\", start=0:76, end=0:78)|12",
+    "Whitespace(source=\" \", start=0:78, end=0:79)| ",
+    "Number(value=-3.5, number_type=Number, source=\"-3.5\", start=0:79, end=0:83)|-3.5",
+    "Whitespace(source=\" \", start=0:83, end=0:84)| ",
+    "Number(value=4, number_type=IntegerWithExplicitSign, source=\"+4\", start=0:84, end=0:86)|4",
+    "Whitespace(source=\" \", start=0:86, end=0:87)| ",
+    "Number(value=1000, number_type=Number, source=\"1e3\", start=0:87, end=0:90)|1000",
+    "Whitespace(source=\" \", start=0:90, end=0:91)| ",
+    "Percentage(value=50, number_type=Integer, source=\"50%\", start=0:91, end=0:94)|50%",
+    "Whitespace(source=\" \", start=0:94, end=0:95)| ",
+    "Dimension(value=2.5, number_type=Number, unit=\"px\", source=\"2.5px\", start=0:95, end=0:100)|2.5px",
+    "Whitespace(source=\" \", start=0:100, end=0:101)| ",
+    "Dimension(value=7, number_type=Integer, unit=\"EM\", source=\"7EM\", start=0:101, end=0:104)|7EM",
+    "Whitespace(source=\" \", start=0:104, end=0:105)| ",
+    "Delim(value=\"<\", code_point=U+003C, source=\"<\", start=0:105, end=0:106)|<",
+    "Whitespace(source=\" \", start=0:106, end=0:107)| ",
+    "Delim(value=\"!\", code_point=U+0021, source=\"!\", start=0:107, end=0:108)|!",
+    "Whitespace(source=\" \", start=0:108, end=0:109)| ",
+    "Delim(value=\"~\", code_point=U+007E, source=\"~\", start=0:109, end=0:110)|~",
+    "Whitespace(source=\" \", start=0:110, end=0:111)| ",
+    "Delim(value=\".\", code_point=U+002E, source=\".\", start=0:111, end=0:112)|.",
+    "Whitespace(source=\" \", start=0:112, end=0:113)| ",
+    "Comma(source=\",\", start=0:113, end=0:114)|,",
+    "Whitespace(source=\" \", start=0:114, end=0:115)| ",
+    "Colon(source=\":\", start=0:115, end=0:116)|:",
+    "Whitespace(source=\" \", start=0:116, end=0:117)| ",
+    "Semicolon(source=\";\", start=0:117, end=0:118)|;",
+    "Whitespace(source=\" \", start=0:118, end=0:119)| ",
+    "OpenSquare(source=\"[\", start=0:119, end=0:120)|[",
+    "Whitespace(source=\" \", start=0:120, end=0:121)| ",
+    "CloseSquare(source=\"]\", start=0:121, end=0:122)|]",
+    "Whitespace(source=\" \", start=0:122, end=0:123)| ",
+    "OpenParen(source=\"(\", start=0:123, end=0:124)|(",
+    "Whitespace(source=\" \", start=0:124, end=0:125)| ",
+    "CloseParen(source=\")\", start=0:125, end=0:126)|)",
+    "Whitespace(source=\" \", start=0:126, end=0:127)| ",
+    "OpenCurly(source=\"{\", start=0:127, end=0:128)|{",
+    "Whitespace(source=\" \", start=0:128, end=0:129)| ",
+    "CloseCurly(source=\"}\", start=0:129, end=0:130)|}",
+    "Whitespace(source=\" \", start=0:130, end=0:131)| ",
+    "CDO(source=\"<!--\", start=0:131, end=0:135)|<!--",
+    "Whitespace(source=\" \", start=0:135, end=0:136)| ",
+    "CDC(source=\"-->\", start=0:136, end=0:139)|-->",
+    "Whitespace(source=\" \", start=0:139, end=0:140)| ",
+    "Delim(value=\"\\\\\", code_point=U+005C, source=\"\\\\\", start=0:140, end=0:141)|\\",
+    "Whitespace(source=\"\\n \", start=0:141, end=1:1)| ",
+    "Ident(value=\"bad\", source=\"bad\", start=1:1, end=1:4)|bad",
+    "BadString(source=\"\\\"\", start=1:4, end=1:5)|",
+    "Whitespace(source=\"\\n\", start=1:5, end=2:0)| ",
+    "__EOF__(source=\"\", start=2:0, end=2:0)|",
+]
+
+## Tokenizer input 2 of the local probe (Token::to_debug_string and Token::to_string).
+let to_string_input_2: str = "\u{1}\u{7f} u+ 0.0000001 1e40 -0 1.23456789 100000000 \\0 \\D800 \\110000 \\41 B"
+
+## `to_debug_string|to_string` of each token of to_string_input_2, from the donor.
+let to_string_expected_2: str[18] = [
+    "Delim(value=\"\\u0001\", code_point=U+0001, source=\"\\u0001\", start=0:0, end=0:1)|\u{1}",
+    "Delim(value=\"\u{7f}\", code_point=U+007F, source=\"\u{7f}\", start=0:1, end=0:2)|\u{7f}",
+    "Whitespace(source=\" \", start=0:2, end=0:3)| ",
+    "Ident(value=\"u\", source=\"u\", start=0:3, end=0:4)|u",
+    "Delim(value=\"+\", code_point=U+002B, source=\"+\", start=0:4, end=0:5)|+",
+    "Whitespace(source=\" \", start=0:5, end=0:6)| ",
+    "Number(value=1e-7, number_type=Number, source=\"0.0000001\", start=0:6, end=0:15)|1e-7",
+    "Whitespace(source=\" \", start=0:15, end=0:16)| ",
+    "Number(value=3.4028234663852886e+38, number_type=Number, source=\"1e40\", start=0:16, end=0:20)|1e+40",
+    "Whitespace(source=\" \", start=0:20, end=0:21)| ",
+    "Number(value=0, number_type=IntegerWithExplicitSign, source=\"-0\", start=0:21, end=0:23)|0",
+    "Whitespace(source=\" \", start=0:23, end=0:24)| ",
+    "Number(value=1.23456789, number_type=Number, source=\"1.23456789\", start=0:24, end=0:34)|1.23456789",
+    "Whitespace(source=\" \", start=0:34, end=0:35)| ",
+    "Number(value=100000000, number_type=Integer, source=\"100000000\", start=0:35, end=0:44)|100000000",
+    "Whitespace(source=\" \", start=0:44, end=0:45)| ",
+    "Ident(value=\"���AB\", source=\"\\\\0 \\\\D800 \\\\110000 \\\\41 B\", start=0:45, end=0:67)|���AB",
+    "__EOF__(source=\"\", start=0:67, end=0:67)|",
+]
+
+## The values of the Number serialization table.
+func number_serialization_values() -> f64[15]:
+    return [0.0, 1.0, -1.0, 1.5, 0.1, 1.0 / 3.0, 123456789.0, 1e20, 1e-7, 4e-7, 5e-7, 0.0000005, -2.5, 3.14159265, 1e300]
+
+## `Number(Number).to_string()|Number(Integer)|Number(IntegerWithExplicitSign)|Token number to_string|Token percentage to_string`
+## for each value, from the donor.
+let number_serialization_expected: str[15] = [
+    "0|0|+0|0|0%",
+    "1|1|+1|1|1%",
+    "-1|-1|-1|-1|-1%",
+    "1.5|1.5|+1.5|1.5|1.5%",
+    "0.1|0.1|+0.1|0.1|0.1%",
+    "0.333333|0.333333|+0.3333333333333333|0.3333333333333333|0.3333333333333333%",
+    "123456789|123456789|+123456789|123456789|123456789%",
+    "18446744073709551615.555556|18446744073709551615.555556|+100000000000000000000|100000000000000000000|100000000000000000000%",
+    "0|0|+1e-7|1e-7|1e-7%",
+    "0|0|+4e-7|4e-7|4e-7%",
+    "5e-7|5e-7|+5e-7|5e-7|5e-7%",
+    "5e-7|5e-7|+5e-7|5e-7|5e-7%",
+    "-2.5|-2.5|-2.5|-2.5|-2.5%",
+    "3.141593|3.141593|+3.14159265|3.14159265|3.14159265%",
+    "1e+300|1e+300|+1e+300|1e+300|1e+300%",
+]
+
+## infinity, -infinity, NaN as Number, and +infinity as IntegerWithExplicitSign, from the donor.
+let number_special_expected: str[4] = ["infinity", "-infinity", "NaN", "+inf"]
+
+## round_to_nearest_integer of 0.5, -0.5, 1.5, -1.5, 2.4999, 1e10, -1e10, NaN, inf, -inf, from the donor.
+let round_expected: i32[10] = [1, 0, 2, -1, 2, 2147483647, -2147483648, 0, 2147483647, -2147483648]
+
+## The names of the identifier/string/url serialization table.
+let serialization_names: str[11] = ["", "-", "--", "-1a", "1a", "a b", "é_x", "\u{1}z", "a\"b\\c", "a\u{7f}", "_-9"]
+
+## `[ident] [string] [url] [function] [at-keyword] [id hash]` Token::to_string of each name, from the donor.
+let serialization_expected: str[11] = [
+    "[] [\"\"] [url(\"\")] [(] [@] [#]",
+    "[\\-] [\"-\"] [url(\"-\")] [\\-(] [@\\-] [#\\-]",
+    "[--] [\"--\"] [url(\"--\")] [--(] [@--] [#--]",
+    "[-\\31 a] [\"-1a\"] [url(\"-1a\")] [-\\31 a(] [@-\\31 a] [#-\\31 a]",
+    "[\\31 a] [\"1a\"] [url(\"1a\")] [\\31 a(] [@\\31 a] [#\\31 a]",
+    "[a\\ b] [\"a b\"] [url(\"a b\")] [a\\ b(] [@a\\ b] [#a\\ b]",
+    "[é_x] [\"é_x\"] [url(\"é_x\")] [é_x(] [@é_x] [#é_x]",
+    "[\\1 z] [\"\\1 z\"] [url(\"\\1 z\")] [\\1 z(] [@\\1 z] [#\\1 z]",
+    "[a\\\"b\\\\c] [\"a\\\"b\\\\c\"] [url(\"a\\\"b\\\\c\")] [a\\\"b\\\\c(] [@a\\\"b\\\\c] [#a\\\"b\\\\c]",
+    "[a\\7f ] [\"a\\7f \"] [url(\"a\\7f \")] [a\\7f (] [@a\\7f ] [#a\\7f ]",
+    "[_-9] [\"_-9\"] [url(\"_-9\")] [_-9(] [@_-9] [#_-9]",
+]

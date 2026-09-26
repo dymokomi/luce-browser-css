@@ -24,7 +24,8 @@ of this repository.
 
 ## Testing
 
-`./test.sh` type-checks every module.
+`./test.sh` type-checks every module and runs the unit tests of `css_syntax` (the CSS tokenizer
+corpora in `tests/`, TestCSSTokenStream and focused cases).
 
 ## License
 

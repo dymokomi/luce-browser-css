@@ -13,4 +13,10 @@
 #
 #==============================================================================================
 
+# Module-wide imports (imports apply to every fragment of the module, language §16.1).
 import ak
+import text_codec
+import luce
+import io
+import memory
+import math

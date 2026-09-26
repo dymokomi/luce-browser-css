@@ -1,0 +1,566 @@
+#==============================================================================================
+#
+#   tokenizer_1 - CSS::Parser::Tokenizer: input, code point access, escapes, idents, numbers
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Parser/Tokenizer.h (lines 1-108: U32Twin, U32Triplet) and
+#       LibWeb/CSS/Parser/Tokenizer.cpp (lines 1-576: the code point classes, tokenize, the
+#       code point reading helpers, consume_escaped_code_point, consume_an_ident_like_token,
+#       consume_a_number, convert_a_string_to_a_number, consume_an_ident_sequence). The rest of
+#       Tokenizer.cpp is tokenizer_2.
+#
+#       The Tokenizer keeps a Utf8View of its own m_decoded_input, whose bytes live inside the
+#       Tokenizer for a short string: a Tokenizer is constructed in place and never moved.
+#
+#==============================================================================================
+
+# U+FFFD REPLACEMENT CHARACTER (�)
+let replacement_character: u32 = 0xfffd
+
+## AK/Debug.h's CSS_TOKENIZER_DEBUG (0 in the donor's build).
+let css_tokenizer_debug: bool = false
+
+# mark: U32Twin and U32Triplet ==================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.h:22 Web::CSS::Parser::U32Twin::set.
+pub func u32_twin_set(this: U32Twin*, index: usize, value: u32):
+    if index == 0:
+        this.first = value
+    if index == 1:
+        this.second = value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.h:36 Web::CSS::Parser::U32Triplet::set.
+pub func u32_triplet_set(this: U32Triplet*, index: usize, value: u32):
+    if index == 0:
+        this.first = value
+    if index == 1:
+        this.second = value
+    if index == 2:
+        this.third = value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.h:46 Web::CSS::Parser::U32Triplet::to_twin_12.
+pub func u32_triplet_to_twin_12(this: const U32Triplet*) -> U32Twin:
+    return U32Twin(first = this.first, second = this.second)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.h:51 Web::CSS::Parser::U32Triplet::to_twin_23.
+pub func u32_triplet_to_twin_23(this: const U32Triplet*) -> U32Twin:
+    return U32Twin(first = this.second, second = this.third)
+
+# mark: Code point classes ======================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:23 Web::CSS::Parser::log_parse_error.
+func log_parse_error(location: io.Location = luce.location):
+    if css_tokenizer_debug:
+        ak.dbgln(f"Parse error (css tokenization) [\u{1b}[34m{location.function}\u{1b}[0m @ {location.file}:{location.line}] ")
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:28 Web::CSS::Parser::is_eof.
+func is_eof(code_point: u32) -> bool:
+    return code_point == tokenizer_eof
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:33 Web::CSS::Parser::is_quotation_mark.
+func is_quotation_mark(code_point: u32) -> bool:
+    return code_point == 0x22
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:38 Web::CSS::Parser::is_hyphen_minus.
+func is_hyphen_minus(code_point: u32) -> bool:
+    return code_point == 0x2d
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:43 Web::CSS::Parser::is_number_sign.
+func is_number_sign(code_point: u32) -> bool:
+    return code_point == 0x23
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:48 Web::CSS::Parser::is_reverse_solidus.
+func is_reverse_solidus(code_point: u32) -> bool:
+    return code_point == 0x5c
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:53 Web::CSS::Parser::is_apostrophe.
+func is_apostrophe(code_point: u32) -> bool:
+    return code_point == 0x27
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:58 Web::CSS::Parser::is_left_paren.
+func is_left_paren(code_point: u32) -> bool:
+    return code_point == 0x28
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:63 Web::CSS::Parser::is_right_paren.
+func is_right_paren(code_point: u32) -> bool:
+    return code_point == 0x29
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:68 Web::CSS::Parser::is_plus_sign.
+func is_plus_sign(code_point: u32) -> bool:
+    return code_point == 0x2b
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:73 Web::CSS::Parser::is_comma.
+func is_comma(code_point: u32) -> bool:
+    return code_point == 0x2c
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:78 Web::CSS::Parser::is_full_stop.
+func is_full_stop(code_point: u32) -> bool:
+    return code_point == 0x2e
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:83 Web::CSS::Parser::is_asterisk.
+func is_asterisk(code_point: u32) -> bool:
+    return code_point == 0x2a
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:88 Web::CSS::Parser::is_solidus.
+func is_solidus(code_point: u32) -> bool:
+    return code_point == 0x2f
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:93 Web::CSS::Parser::is_colon.
+func is_colon(code_point: u32) -> bool:
+    return code_point == 0x3a
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:98 Web::CSS::Parser::is_semicolon.
+func is_semicolon(code_point: u32) -> bool:
+    return code_point == 0x3b
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:103 Web::CSS::Parser::is_less_than_sign.
+func is_less_than_sign(code_point: u32) -> bool:
+    return code_point == 0x3c
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:108 Web::CSS::Parser::is_greater_than_sign.
+func is_greater_than_sign(code_point: u32) -> bool:
+    return code_point == 0x3e
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:113 Web::CSS::Parser::is_at.
+func is_at(code_point: u32) -> bool:
+    return code_point == 0x40
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:118 Web::CSS::Parser::is_open_square_bracket.
+func is_open_square_bracket(code_point: u32) -> bool:
+    return code_point == 0x5b
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:123 Web::CSS::Parser::is_closed_square_bracket.
+func is_closed_square_bracket(code_point: u32) -> bool:
+    return code_point == 0x5d
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:128 Web::CSS::Parser::is_open_curly_bracket.
+func is_open_curly_bracket(code_point: u32) -> bool:
+    return code_point == 0x7b
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:133 Web::CSS::Parser::is_closed_curly_bracket.
+func is_closed_curly_bracket(code_point: u32) -> bool:
+    return code_point == 0x7d
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:138 Web::CSS::Parser::is_percent.
+func is_percent(code_point: u32) -> bool:
+    return code_point == 0x25
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:143 Web::CSS::Parser::is_exclamation_mark.
+func is_exclamation_mark(code_point: u32) -> bool:
+    return code_point == 0x21
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:148 Web::CSS::Parser::is_e.
+func is_e(code_point: u32) -> bool:
+    return code_point == 0x65
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:153 Web::CSS::Parser::is_E.
+func is_e_2(code_point: u32) -> bool:
+    return code_point == 0x45
+
+# mark: Tokenizing ==============================================================================
+
+## Tokenizer::tokenize's `filter_code_points` lambda.
+# https://www.w3.org/TR/css-syntax-3/#css-filter-code-points
+func tokenizer_tokenize_filter_code_points(input: ak.StringView, encoding: ak.StringView) -> ak.String:
+    let decoder = text_codec.decoder_for(encoding) else trap("VERIFY: decoder.has_value()")
+
+    let decoded_input = text_codec.decoder_to_utf8(decoder, input) else trap("MUST: to_utf8")
+
+    # OPTIMIZATION: If the input doesn't contain any filterable characters, we can skip the filtering
+    var contains_filterable = false
+    let decoded_code_points = ak.string_code_points(&decoded_input)
+    var it = ak.utf8_view_begin(&decoded_code_points)
+    let end = ak.utf8_view_end(&decoded_code_points)
+    while not ak.utf8_code_point_iterator_eq(&it, &end):
+        let code_point = ak.utf8_code_point_iterator_deref(&it)
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        if code_point == (u32)'\r' or code_point == 0x0c or code_point == 0x00 or ak.is_unicode_surrogate(code_point):
+            contains_filterable = true
+            break
+    if not contains_filterable:
+        return decoded_input
+
+    var builder = ak.string_builder_new_usize(ak.string_view_length(&input))
+    var last_was_carriage_return = false
+
+    # To filter code points from a stream of (unfiltered) code points input:
+    it = ak.utf8_view_begin(&decoded_code_points)
+    while not ak.utf8_code_point_iterator_eq(&it, &end):
+        let code_point = ak.utf8_code_point_iterator_deref(&it)
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        # Replace any U+000D CARRIAGE RETURN (CR) code points,
+        # U+000C FORM FEED (FF) code points,
+        # or pairs of U+000D CARRIAGE RETURN (CR) followed by U+000A LINE FEED (LF)
+        # in input by a single U+000A LINE FEED (LF) code point.
+        if code_point == (u32)'\r':
+            if last_was_carriage_return:
+                ak.string_builder_append_u8(&builder, '\n')
+            else:
+                last_was_carriage_return = true
+        else:
+            if last_was_carriage_return:
+                ak.string_builder_append_u8(&builder, '\n')
+
+            if code_point == (u32)'\n':
+                if not last_was_carriage_return:
+                    ak.string_builder_append_u8(&builder, '\n')
+
+            elif code_point == 0x0c:
+                ak.string_builder_append_u8(&builder, '\n')
+                # Replace any U+0000 NULL or surrogate code points in input with U+FFFD REPLACEMENT CHARACTER (�).
+            elif code_point == 0x00 or ak.is_unicode_surrogate(code_point):
+                ak.string_builder_append_code_point(&builder, replacement_character)
+            else:
+                ak.string_builder_append_code_point(&builder, code_point)
+
+            last_was_carriage_return = false
+    return ak.string_builder_to_string_without_validation(&builder)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:158 Web::CSS::Parser::Tokenizer::tokenize.
+pub func tokenizer_tokenize_string_view(input: ak.StringView, encoding: ak.StringView) -> ak.Vector[Token]:
+    var tokenizer = Tokenizer()
+    tokenizer_construct(&tokenizer, tokenizer_tokenize_filter_code_points(input, encoding))
+    return tokenizer_tokenize(&tokenizer)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:221 Web::CSS::Parser::Tokenizer::Tokenizer.
+## `this` must not move afterwards: m_utf8_view may view m_decoded_input's inline bytes.
+pub func tokenizer_construct(this: Tokenizer*, decoded_input: ak.String):
+    this.m_decoded_input = decoded_input
+    ak.utf8_view_construct_string_view(&this.m_utf8_view, ak.string_bytes_as_string_view(&this.m_decoded_input))
+    this.m_utf8_iterator = ak.utf8_view_begin(&this.m_utf8_view)
+    this.m_prev_utf8_iterator = ak.Utf8CodePointIterator()
+    this.m_position = TokenPosition()
+    this.m_prev_position = TokenPosition()
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:228 Web::CSS::Parser::Tokenizer::tokenize.
+pub func tokenizer_tokenize(this: Tokenizer*) -> ak.Vector[Token]:
+    var tokens = ak.Vector[Token]()
+    while true:
+        let token_start = this.m_position
+        var token = tokenizer_consume_a_token(this)
+        token_set_position_range(&token, token_start, this.m_position)
+        ak.vector_append_t(&tokens, token)
+
+        if token_is(&token, TokenType.end_of_file):
+            return tokens
+
+# mark: Reading code points =====================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:243 Web::CSS::Parser::Tokenizer::next_code_point.
+pub func tokenizer_next_code_point(this: Tokenizer*) -> u32:
+    let end = ak.utf8_view_end(&this.m_utf8_view)
+    if ak.utf8_code_point_iterator_eq(&this.m_utf8_iterator, &end):
+        return tokenizer_eof
+    this.m_prev_utf8_iterator = this.m_utf8_iterator
+    discard(ak.utf8_code_point_iterator_inc(&this.m_utf8_iterator))
+    let code_point = ak.utf8_code_point_iterator_deref(&this.m_prev_utf8_iterator)
+
+    this.m_prev_position = this.m_position
+    if is_newline(code_point):
+        this.m_position.line += 1
+        this.m_position.column = 0
+    else:
+        this.m_position.column += 1
+
+    if css_tokenizer_debug:
+        ak.dbgln(f"(Tokenizer) Next code_point: {code_point}")
+    return code_point
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:263 Web::CSS::Parser::Tokenizer::peek_code_point.
+pub func tokenizer_peek_code_point(this: const Tokenizer*, offset: usize = 0) -> u32:
+    var it = this.m_utf8_iterator
+    let end = ak.utf8_view_end(&this.m_utf8_view)
+    var i: usize = 0
+    while i < offset and not ak.utf8_code_point_iterator_eq(&it, &end):
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        i += 1
+    if ak.utf8_code_point_iterator_eq(&it, &end):
+        return tokenizer_eof
+    if css_tokenizer_debug:
+        ak.dbgln(f"(Tokenizer) Peek code_point: {ak.utf8_code_point_iterator_deref(&this.m_prev_utf8_iterator)}")
+    return ak.utf8_code_point_iterator_deref(&it)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:274 Web::CSS::Parser::Tokenizer::peek_twin.
+pub func tokenizer_peek_twin(this: const Tokenizer*) -> U32Twin:
+    var values = U32Twin(first = tokenizer_eof, second = tokenizer_eof)
+    var it = this.m_utf8_iterator
+    let end = ak.utf8_view_end(&this.m_utf8_view)
+    var i: usize = 0
+    while i < 2 and not ak.utf8_code_point_iterator_eq(&it, &end):
+        u32_twin_set(&values, i, ak.utf8_code_point_iterator_deref(&it))
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        i += 1
+    if css_tokenizer_debug:
+        ak.dbgln(f"(Tokenizer) Peek twin: {values.first},{values.second}")
+    return values
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:286 Web::CSS::Parser::Tokenizer::peek_triplet.
+pub func tokenizer_peek_triplet(this: const Tokenizer*) -> U32Triplet:
+    var values = U32Triplet(first = tokenizer_eof, second = tokenizer_eof, third = tokenizer_eof)
+    var it = this.m_utf8_iterator
+    let end = ak.utf8_view_end(&this.m_utf8_view)
+    var i: usize = 0
+    while i < 3 and not ak.utf8_code_point_iterator_eq(&it, &end):
+        u32_triplet_set(&values, i, ak.utf8_code_point_iterator_deref(&it))
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        i += 1
+    if css_tokenizer_debug:
+        ak.dbgln(f"(Tokenizer) Peek triplet: {values.first},{values.second},{values.third}")
+    return values
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:298 Web::CSS::Parser::Tokenizer::start_of_input_stream_twin.
+pub func tokenizer_start_of_input_stream_twin(this: Tokenizer*) -> U32Twin:
+    var twin = U32Twin()
+    # FIXME: Reconsuming just to read the current code point again is weird.
+    tokenizer_reconsume_current_input_code_point(this)
+    twin.first = tokenizer_next_code_point(this)
+    twin.second = tokenizer_peek_code_point(this)
+
+    return twin
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:309 Web::CSS::Parser::Tokenizer::start_of_input_stream_triplet.
+pub func tokenizer_start_of_input_stream_triplet(this: Tokenizer*) -> U32Triplet:
+    var triplet = U32Triplet()
+    # FIXME: Reconsuming just to read the current code point again is weird.
+    tokenizer_reconsume_current_input_code_point(this)
+    triplet.first = tokenizer_next_code_point(this)
+    let next_two = tokenizer_peek_twin(this)
+    triplet.second = next_two.first
+    triplet.third = next_two.second
+
+    return triplet
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:322 Web::CSS::Parser::Tokenizer::create_eof_token.
+pub func tokenizer_create_eof_token() -> Token:
+    return token_create(TokenType.end_of_file, ak.string_new())
+
+# mark: Escapes, idents and numbers =============================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:328 Web::CSS::Parser::Tokenizer::consume_escaped_code_point.
+# https://www.w3.org/TR/css-syntax-3/#consume-escaped-code-point
+pub func tokenizer_consume_escaped_code_point(this: Tokenizer*) -> u32:
+    # This section describes how to consume an escaped code point.
+    # It assumes that the U+005C REVERSE SOLIDUS (\) has already been consumed and that the next
+    # input code point has already been verified to be part of a valid escape.
+    # It will return a code point.
+
+    # Consume the next input code point.
+    let input = tokenizer_next_code_point(this)
+
+    # hex digit
+    if is_hex_digit(input):
+        # Consume as many hex digits as possible, but no more than 5.
+        # Note that this means 1-6 hex digits have been consumed in total.
+        var builder = ak.string_builder_new()
+        ak.string_builder_append_code_point(&builder, input)
+
+        var counter: usize = 0
+        # while (is_hex_digit(peek_code_point()) && counter++ < 5)
+        while is_hex_digit(tokenizer_peek_code_point(this)):
+            let below_limit = counter < 5
+            counter += 1
+            if not below_limit:
+                break
+            ak.string_builder_append_code_point(&builder, tokenizer_next_code_point(this))
+
+        # If the next input code point is whitespace, consume it as well.
+        if is_whitespace(tokenizer_peek_code_point(this)):
+            discard(tokenizer_next_code_point(this))
+
+        # Interpret the hex digits as a hexadecimal number.
+        let unhexed = ak.parse_hexadecimal_number_string_view_u32(ak.string_builder_string_view(&builder)) else 0
+        # If this number is zero, or is for a surrogate, or is greater than the maximum allowed
+        # code point, return U+FFFD REPLACEMENT CHARACTER (�).
+        if unhexed == 0 or ak.is_unicode_surrogate(unhexed) or is_greater_than_maximum_allowed_code_point(unhexed):
+            return replacement_character
+
+        # Otherwise, return the code point with that value.
+        return unhexed
+
+    # EOF
+    if is_eof(input):
+        # This is a parse error. Return U+FFFD REPLACEMENT CHARACTER (�).
+        log_parse_error()
+        return replacement_character
+
+    # anything else
+    # Return the current input code point.
+    return input
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:380 Web::CSS::Parser::Tokenizer::consume_an_ident_like_token.
+# https://www.w3.org/TR/css-syntax-3/#consume-ident-like-token
+pub func tokenizer_consume_an_ident_like_token(this: Tokenizer*) -> Token:
+    # This section describes how to consume an ident-like token from a stream of code points.
+    # It returns an <ident-token>, <function-token>, <url-token>, or <bad-url-token>.
+
+    # Consume an ident sequence, and let string be the result.
+    let start_byte_offset = tokenizer_current_byte_offset(this)
+    let string = tokenizer_consume_an_ident_sequence(this)
+
+    # If string’s value is an ASCII case-insensitive match for "url", and the next input code
+    # point is U+0028 LEFT PARENTHESIS ((), consume it.
+    if ak.fly_string_equals_ignoring_ascii_case_string_view(&string, ak.sv("url")) and is_left_paren(tokenizer_peek_code_point(this)):
+        discard(tokenizer_next_code_point(this))
+
+        # While the next two input code points are whitespace, consume the next input code point.
+        while true:
+            let maybe_whitespace = tokenizer_peek_twin(this)
+            if not (is_whitespace(maybe_whitespace.first) and is_whitespace(maybe_whitespace.second)):
+                break
+
+            discard(tokenizer_next_code_point(this))
+
+        # If the next one or two input code points are U+0022 QUOTATION MARK ("), U+0027 APOSTROPHE ('),
+        # or whitespace followed by U+0022 QUOTATION MARK (") or U+0027 APOSTROPHE ('), then create a
+        # <function-token> with its value set to string and return it.
+        let next_two = tokenizer_peek_twin(this)
+        if is_quotation_mark(next_two.first) or is_apostrophe(next_two.first) or (is_whitespace(next_two.first) and (is_quotation_mark(next_two.second) or is_apostrophe(next_two.second))):
+            return token_create_function(string, tokenizer_input_since(this, start_byte_offset))
+
+        # Otherwise, consume a url token, and return it.
+        return tokenizer_consume_a_url_token(this, start_byte_offset)
+
+    # Otherwise, if the next input code point is U+0028 LEFT PARENTHESIS ((), consume it.
+    if is_left_paren(tokenizer_peek_code_point(this)):
+        discard(tokenizer_next_code_point(this))
+
+        # Create a <function-token> with its value set to string and return it.
+        return token_create_function(string, tokenizer_input_since(this, start_byte_offset))
+
+    # Otherwise, create an <ident-token> with its value set to string and return it.
+    return token_create_ident(string, tokenizer_input_since(this, start_byte_offset))
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:429 Web::CSS::Parser::Tokenizer::consume_a_number.
+# https://www.w3.org/TR/css-syntax-3/#consume-number
+pub func tokenizer_consume_a_number(this: Tokenizer*) -> Number:
+    # This section describes how to consume a number from a stream of code points.
+    # It returns a numeric value, and a type which is either "integer" or "number".
+    #
+    # Note: This algorithm does not do the verification of the first few code points
+    # that are necessary to ensure a number can be obtained from the stream. Ensure
+    # that the stream starts with a number before calling this algorithm.
+
+    # Execute the following steps in order:
+
+    # 1. Initially set type to "integer". Let repr be the empty string.
+    var repr = ak.string_builder_new()
+    var type_ = NumberType.integer
+
+    # 2. If the next input code point is U+002B PLUS SIGN (+) or U+002D HYPHEN-MINUS (-),
+    # consume it and append it to repr.
+    var has_explicit_sign = false
+    let next_input = tokenizer_peek_code_point(this)
+    if is_plus_sign(next_input) or is_hyphen_minus(next_input):
+        has_explicit_sign = true
+        ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+
+    # 3. While the next input code point is a digit, consume it and append it to repr.
+    while true:
+        let digits = tokenizer_peek_code_point(this)
+        if not is_digit(digits):
+            break
+
+        ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+
+    # 4. If the next 2 input code points are U+002E FULL STOP (.) followed by a digit, then:
+    let maybe_number = tokenizer_peek_twin(this)
+    if is_full_stop(maybe_number.first) and is_digit(maybe_number.second):
+        # 1. Consume them.
+        # 2. Append them to repr.
+        ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+        ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+
+        # 3. Set type to "number".
+        type_ = NumberType.number
+
+        # 4. While the next input code point is a digit, consume it and append it to repr.
+        while true:
+            let digit = tokenizer_peek_code_point(this)
+            if not is_digit(digit):
+                break
+
+            ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+
+    # 5. If the next 2 or 3 input code points are U+0045 LATIN CAPITAL LETTER E (E) or
+    # U+0065 LATIN SMALL LETTER E (e), optionally followed by U+002D HYPHEN-MINUS (-)
+    # or U+002B PLUS SIGN (+), followed by a digit, then:
+    let maybe_exp = tokenizer_peek_triplet(this)
+    if (is_e_2(maybe_exp.first) or is_e(maybe_exp.first)) and (((is_plus_sign(maybe_exp.second) or is_hyphen_minus(maybe_exp.second)) and is_digit(maybe_exp.third)) or (is_digit(maybe_exp.second))):
+        # 1. Consume them.
+        # 2. Append them to repr.
+        if is_plus_sign(maybe_exp.second) or is_hyphen_minus(maybe_exp.second):
+            if is_digit(maybe_exp.third):
+                ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+                ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+                ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+        elif is_digit(maybe_exp.second):
+            ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+            ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+
+        # 3. Set type to "number".
+        type_ = NumberType.number
+
+        # 4. While the next input code point is a digit, consume it and append it to repr.
+        while true:
+            let digits = tokenizer_peek_code_point(this)
+            if not is_digit(digits):
+                break
+
+            ak.string_builder_append_code_point(&repr, tokenizer_next_code_point(this))
+
+    # 6. Convert repr to a number, and set the value to the returned value.
+    let value = tokenizer_convert_a_string_to_a_number(this, ak.string_builder_string_view(&repr))
+
+    # 7. Return value and type.
+    if type_ == NumberType.integer and has_explicit_sign:
+        return number_create(NumberType.integer_with_explicit_sign, value)
+    return number_create(type_, value)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:526 Web::CSS::Parser::Tokenizer::convert_a_string_to_a_number.
+# https://www.w3.org/TR/css-syntax-3/#convert-string-to-number
+pub func tokenizer_convert_a_string_to_a_number(this: Tokenizer*, string: ak.StringView) -> f64:
+    discard(this)
+    # FIXME: We already found the whole part, fraction part and exponent during
+    #        validation, we could probably skip
+    return ak.string_view_to_number_f64(&string, ak.TrimWhitespace.no) else trap("release_value: not a number")
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:534 Web::CSS::Parser::Tokenizer::consume_an_ident_sequence.
+# https://www.w3.org/TR/css-syntax-3/#consume-name
+pub func tokenizer_consume_an_ident_sequence(this: Tokenizer*) -> ak.FlyString:
+    # This section describes how to consume an ident sequence from a stream of code points.
+    # It returns a string containing the largest name that can be formed from adjacent
+    # code points in the stream, starting from the first.
+    #
+    # Note: This algorithm does not do the verification of the first few code points that
+    # are necessary to ensure the returned code points would constitute an <ident-token>.
+    # If that is the intended use, ensure that the stream starts with an ident sequence before
+    # calling this algorithm.
+
+    # Let result initially be an empty string.
+    var result = ak.string_builder_new()
+
+    # Repeatedly consume the next input code point from the stream:
+    while true:
+        let input = tokenizer_next_code_point(this)
+
+        if is_eof(input):
+            break
+
+        # name code point
+        if is_ident_code_point(input):
+            # Append the code point to result.
+            ak.string_builder_append_code_point(&result, input)
+            continue
+
+        # the stream starts with a valid escape
+        if tokenizer_is_valid_escape_sequence(tokenizer_start_of_input_stream_twin(this)):
+            # Consume an escaped code point. Append the returned code point to result.
+            ak.string_builder_append_code_point(&result, tokenizer_consume_escaped_code_point(this))
+            continue
+
+        # anything else
+        # Reconsume the current input code point. Return result.
+        tokenizer_reconsume_current_input_code_point(this)
+        break
+
+    return ak.string_builder_to_fly_string_without_validation(&result)

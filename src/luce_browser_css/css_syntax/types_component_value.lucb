@@ -8,11 +8,22 @@
 #       generator (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the
 #       generator could not map.
 #
+#       Edited by hand (r30a): ComponentValue conforms to TokenStreamToken (four one-line
+#       forwards).
+#
 #==============================================================================================
 
 # mark: ComponentValue ==========================================================================
 
 ## Web::CSS::Parser::ComponentValue (Libraries/LibWeb/CSS/Parser/ComponentValue.h:20).
-pub struct ComponentValue:
+pub struct ComponentValue: TokenStreamToken[ComponentValue]:
     pub var m_value: TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue
     pub var m_attr_tainted: bool  # C++ default: { false }
+
+    pub func token_stream_is(type_: TokenType) -> bool: return component_value_is(&self, type_)
+
+    pub func token_stream_to_string() -> ak.String: return component_value_to_string(&self)
+
+    pub func token_stream_to_debug_string() -> ak.String: return component_value_to_debug_string(&self)
+
+    pub func token_stream_make_eof() -> ComponentValue: return component_value_from_token(tokenizer_create_eof_token())

@@ -1,0 +1,60 @@
+#==============================================================================================
+#
+#   character_types - the code point classes of CSS Syntax Level 3
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/CharacterTypes.h (lines 1-74).
+#
+#==============================================================================================
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:15 Web::CSS::is_digit.
+# https://www.w3.org/TR/css-syntax-3/#digit
+pub func is_digit(code_point: u32) -> bool:
+    # A code point between U+0030 DIGIT ZERO (0) and U+0039 DIGIT NINE (9) inclusive.
+    return code_point >= 0x30 and code_point <= 0x39
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:22 Web::CSS::is_hex_digit.
+# https://www.w3.org/TR/css-syntax-3/#hex-digit
+pub func is_hex_digit(code_point: u32) -> bool:
+    # A digit,
+    # or a code point between U+0041 LATIN CAPITAL LETTER A (A) and U+0046 LATIN CAPITAL LETTER F (F) inclusive,
+    # or a code point between U+0061 LATIN SMALL LETTER A (a) and U+0066 LATIN SMALL LETTER F (f) inclusive.
+    return is_digit(code_point) or (code_point >= 0x41 and code_point <= 0x46) or (code_point >= 0x61 and code_point <= 0x66)
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:31 Web::CSS::is_ident_start_code_point.
+# https://www.w3.org/TR/css-syntax-3/#ident-start-code-point
+pub func is_ident_start_code_point(code_point: u32) -> bool:
+    # A letter, a non-ASCII code point, or U+005F LOW LINE (_).
+    # Note: the is_unicode condition is used to reject the Tokenizer's EOF codepoint.
+    return ak.is_ascii_alpha(code_point) or (not ak.is_ascii(code_point) and ak.is_unicode(code_point)) or code_point == (u32)'_'
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:39 Web::CSS::is_ident_code_point.
+# https://www.w3.org/TR/css-syntax-3/#ident-code-point
+pub func is_ident_code_point(code_point: u32) -> bool:
+    # An ident-start code point, a digit, or U+002D HYPHEN-MINUS (-).
+    return is_ident_start_code_point(code_point) or ak.is_ascii_digit(code_point) or code_point == (u32)'-'
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:46 Web::CSS::is_non_printable_code_point.
+# https://www.w3.org/TR/css-syntax-3/#non-printable-code-point
+pub func is_non_printable_code_point(code_point: u32) -> bool:
+    return code_point <= 0x8 or code_point == 0xb or (code_point >= 0xe and code_point <= 0x1f) or code_point == 0x7f
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:52 Web::CSS::is_newline.
+# https://www.w3.org/TR/css-syntax-3/#newline
+pub func is_newline(code_point: u32) -> bool:
+    # U+000A LINE FEED.
+    # Note that U+000D CARRIAGE RETURN and U+000C FORM FEED are not included in this definition,
+    # as they are converted to U+000A LINE FEED during preprocessing.
+    return code_point == 0xa
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:61 Web::CSS::is_whitespace.
+# https://www.w3.org/TR/css-syntax-3/#whitespace
+pub func is_whitespace(code_point: u32) -> bool:
+    # A newline, U+0009 CHARACTER TABULATION, or U+0020 SPACE.
+    return is_newline(code_point) or code_point == (u32)'\t' or code_point == (u32)' '
+
+## Ported from Libraries/LibWeb/CSS/CharacterTypes.h:68 Web::CSS::is_greater_than_maximum_allowed_code_point.
+# https://www.w3.org/TR/css-syntax-3/#maximum-allowed-code-point
+pub func is_greater_than_maximum_allowed_code_point(code_point: u32) -> bool:
+    # The greatest code point defined by Unicode: U+10FFFF.
+    return code_point > 0x10ffff

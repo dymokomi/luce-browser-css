@@ -1,0 +1,23 @@
+#==============================================================================================
+#
+#   format_support - AK::String::formatted and StringBuilder::appendff for this module
+#
+#   DESCRIPTION:
+#       The two AK formatting entry points the module's C++ calls with AK format strings
+#       ("{:+}", "{:.6}", "{:x}", "U+{:04X}", "{}%"): the arguments are ak's type-erased
+#       parameters, formatted by ak's port of AK/Format.cpp (DESIGN.md §2.11).
+#
+#==============================================================================================
+
+## `MUST(String::formatted(fmtstr, arguments...))`.
+func string_formatted(fmtstr: str, arguments: const ak.TypeErasedParameter[]) -> ak.String:
+    var params = ak.type_erased_format_params_create(arguments)
+    return ak.string_vformatted(ak.sv(fmtstr), &params) else trap("MUST: String::formatted")
+
+## `builder.appendff(fmtstr, arguments...)`.
+func string_builder_appendff(builder: ak.StringBuilder*, fmtstr: str, arguments: const ak.TypeErasedParameter[]):
+    ak.vformat_arguments(builder, ak.sv(fmtstr), arguments) else trap("MUST: StringBuilder::appendff")
+
+## `builder.append(string)` for a String (C++ converts it to a StringView).
+func string_builder_append_string(builder: ak.StringBuilder*, string: const ak.String*):
+    ak.string_builder_append_string_view(builder, ak.string_bytes_as_string_view(string))

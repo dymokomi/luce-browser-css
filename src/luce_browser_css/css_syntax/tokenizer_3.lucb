@@ -1,0 +1,282 @@
+#==============================================================================================
+#
+#   tokenizer_3 - CSS::Parser::Tokenizer: consume a token, and the input's byte offsets
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Parser/Tokenizer.cpp (lines 964-1242: consume_a_token,
+#       current_byte_offset, input_since).
+#
+#==============================================================================================
+
+# mark: Consume a token =========================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:965 Web::CSS::Parser::Tokenizer::consume_a_token.
+# https://www.w3.org/TR/css-syntax-3/#consume-token
+pub func tokenizer_consume_a_token(this: Tokenizer*) -> Token:
+    # This section describes how to consume a token from a stream of code points.
+    # It will return a single token of any type.
+
+    let start_byte_offset = tokenizer_current_byte_offset(this)
+
+    # Consume comments.
+    tokenizer_consume_comments(this)
+
+    # AD-HOC: Preserve comments as whitespace tokens, for serializing custom properties.
+    let after_comments_byte_offset = tokenizer_current_byte_offset(this)
+    if after_comments_byte_offset != start_byte_offset:
+        return token_create_whitespace(tokenizer_input_since(this, start_byte_offset))
+
+    # Consume the next input code point.
+    let input = tokenizer_next_code_point(this)
+
+    # whitespace
+    if is_whitespace(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is whitespace")
+        # Consume as much whitespace as possible. Return a <whitespace-token>.
+        tokenizer_consume_as_much_whitespace_as_possible(this)
+        return token_create_whitespace(tokenizer_input_since(this, start_byte_offset))
+
+    # U+0022 QUOTATION MARK (")
+    if is_quotation_mark(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is quotation mark")
+        # Consume a string token and return it.
+        return tokenizer_consume_string_token(this, input)
+
+    # U+0023 NUMBER SIGN (#)
+    if is_number_sign(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is number sign")
+
+        # If the next input code point is an ident code point or the next two input code points
+        # are a valid escape, then:
+        let next_input = tokenizer_peek_code_point(this)
+        let maybe_escape = tokenizer_peek_twin(this)
+
+        if is_ident_code_point(next_input) or tokenizer_is_valid_escape_sequence(maybe_escape):
+            # 1. Create a <hash-token>.
+
+            # 2. If the next 3 input code points would start an ident sequence, set the <hash-token>’s
+            #    type flag to "id".
+            var hash_type = TokenHashType.unrestricted
+            if tokenizer_would_start_an_ident_sequence(tokenizer_peek_triplet(this)):
+                hash_type = TokenHashType.id
+
+            # 3. Consume an ident sequence, and set the <hash-token>’s value to the returned string.
+            let value = tokenizer_consume_an_ident_sequence(this)
+
+            # 4. Return the <hash-token>.
+            return token_create_hash(value, hash_type, tokenizer_input_since(this, start_byte_offset))
+
+        # Otherwise, return a <delim-token> with its value set to the current input code point.
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+0027 APOSTROPHE (')
+    if is_apostrophe(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is apostrophe")
+        # Consume a string token and return it.
+        return tokenizer_consume_string_token(this, input)
+
+    # U+0028 LEFT PARENTHESIS (()
+    if is_left_paren(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is left paren")
+        # Return a <(-token>.
+        return token_create(TokenType.open_paren, tokenizer_input_since(this, start_byte_offset))
+
+    # U+0029 RIGHT PARENTHESIS ())
+    if is_right_paren(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is right paren")
+        # Return a <)-token>.
+        return token_create(TokenType.close_paren, tokenizer_input_since(this, start_byte_offset))
+
+    # U+002B PLUS SIGN (+)
+    if is_plus_sign(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is plus sign")
+        # If the input stream starts with a number, reconsume the current input code point,
+        # consume a numeric token and return it.
+        if tokenizer_would_start_a_number(tokenizer_start_of_input_stream_triplet(this)):
+            tokenizer_reconsume_current_input_code_point(this)
+            return tokenizer_consume_a_numeric_token(this)
+
+        # Otherwise, return a <delim-token> with its value set to the current input code point.
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+002C COMMA (,)
+    if is_comma(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is comma")
+        # Return a <comma-token>.
+        return token_create(TokenType.comma, tokenizer_input_since(this, start_byte_offset))
+
+    # U+002D HYPHEN-MINUS (-)
+    if is_hyphen_minus(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is hyphen minus")
+        # If the input stream starts with a number, reconsume the current input code point,
+        # consume a numeric token, and return it.
+        if tokenizer_would_start_a_number(tokenizer_start_of_input_stream_triplet(this)):
+            tokenizer_reconsume_current_input_code_point(this)
+            return tokenizer_consume_a_numeric_token(this)
+
+        # Otherwise, if the next 2 input code points are U+002D HYPHEN-MINUS U+003E
+        # GREATER-THAN SIGN (->), consume them and return a <CDC-token>.
+        let next_twin = tokenizer_peek_twin(this)
+        if is_hyphen_minus(next_twin.first) and is_greater_than_sign(next_twin.second):
+            discard(tokenizer_next_code_point(this))
+            discard(tokenizer_next_code_point(this))
+
+            return token_create(TokenType.cdc, tokenizer_input_since(this, start_byte_offset))
+
+        # Otherwise, if the input stream starts with an identifier, reconsume the current
+        # input code point, consume an ident-like token, and return it.
+        if tokenizer_would_start_an_ident_sequence(tokenizer_start_of_input_stream_triplet(this)):
+            tokenizer_reconsume_current_input_code_point(this)
+            return tokenizer_consume_an_ident_like_token(this)
+
+        # Otherwise, return a <delim-token> with its value set to the current input code point.
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+002E FULL STOP (.)
+    if is_full_stop(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is full stop")
+        # If the input stream starts with a number, reconsume the current input code point,
+        # consume a numeric token, and return it.
+        if tokenizer_would_start_a_number(tokenizer_start_of_input_stream_triplet(this)):
+            tokenizer_reconsume_current_input_code_point(this)
+            return tokenizer_consume_a_numeric_token(this)
+
+        # Otherwise, return a <delim-token> with its value set to the current input code point.
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+003A COLON (:)
+    if is_colon(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is colon")
+        # Return a <colon-token>.
+        return token_create(TokenType.colon, tokenizer_input_since(this, start_byte_offset))
+
+    # U+003B SEMICOLON (;)
+    if is_semicolon(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is semicolon")
+        # Return a <semicolon-token>.
+        return token_create(TokenType.semicolon, tokenizer_input_since(this, start_byte_offset))
+
+    # U+003C LESS-THAN SIGN (<)
+    if is_less_than_sign(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is less than")
+        # If the next 3 input code points are U+0021 EXCLAMATION MARK U+002D HYPHEN-MINUS
+        # U+002D HYPHEN-MINUS (!--), consume them and return a <CDO-token>.
+        let maybe_cdo = tokenizer_peek_triplet(this)
+        if is_exclamation_mark(maybe_cdo.first) and is_hyphen_minus(maybe_cdo.second) and is_hyphen_minus(maybe_cdo.third):
+            discard(tokenizer_next_code_point(this))
+            discard(tokenizer_next_code_point(this))
+            discard(tokenizer_next_code_point(this))
+
+            return token_create(TokenType.cdo, tokenizer_input_since(this, start_byte_offset))
+
+        # Otherwise, return a <delim-token> with its value set to the current input code point.
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+0040 COMMERCIAL AT (@)
+    if is_at(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is at")
+        # If the next 3 input code points would start an ident sequence, consume an ident sequence, create
+        # an <at-keyword-token> with its value set to the returned value, and return it.
+        if tokenizer_would_start_an_ident_sequence(tokenizer_peek_triplet(this)):
+            let name = tokenizer_consume_an_ident_sequence(this)
+            return token_create_at_keyword(name, tokenizer_input_since(this, start_byte_offset))
+
+        # Otherwise, return a <delim-token> with its value set to the current input code point.
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+005B LEFT SQUARE BRACKET ([)
+    if is_open_square_bracket(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is open square")
+        # Return a <[-token>.
+        return token_create(TokenType.open_square, tokenizer_input_since(this, start_byte_offset))
+
+    # U+005C REVERSE SOLIDUS (\)
+    if is_reverse_solidus(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is reverse solidus")
+        # If the input stream starts with a valid escape, reconsume the current input code point,
+        # consume an ident-like token, and return it.
+        if tokenizer_is_valid_escape_sequence(tokenizer_start_of_input_stream_twin(this)):
+            tokenizer_reconsume_current_input_code_point(this)
+            return tokenizer_consume_an_ident_like_token(this)
+
+        # Otherwise, this is a parse error. Return a <delim-token> with its value set to the
+        # current input code point.
+        log_parse_error()
+        return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+    # U+005D RIGHT SQUARE BRACKET (])
+    if is_closed_square_bracket(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is closed square")
+        # Return a <]-token>.
+        return token_create(TokenType.close_square, tokenizer_input_since(this, start_byte_offset))
+
+    # U+007B LEFT CURLY BRACKET ({)
+    if is_open_curly_bracket(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is open curly")
+        # Return a <{-token>.
+        return token_create(TokenType.open_curly, tokenizer_input_since(this, start_byte_offset))
+
+    # U+007D RIGHT CURLY BRACKET (})
+    if is_closed_curly_bracket(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is closed curly")
+        # Return a <}-token>.
+        return token_create(TokenType.close_curly, tokenizer_input_since(this, start_byte_offset))
+
+    # digit
+    if is_digit(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is digit")
+        # Reconsume the current input code point, consume a numeric token, and return it.
+        tokenizer_reconsume_current_input_code_point(this)
+        return tokenizer_consume_a_numeric_token(this)
+
+    # name-start code point
+    if is_ident_start_code_point(input):
+        if css_tokenizer_debug:
+            ak.dbgln("is name start")
+        # Reconsume the current input code point, consume an ident-like token, and return it.
+        tokenizer_reconsume_current_input_code_point(this)
+        return tokenizer_consume_an_ident_like_token(this)
+
+    # EOF
+    if is_eof(input):
+        # Return an <EOF-token>.
+        return tokenizer_create_eof_token()
+
+    # anything else
+    if css_tokenizer_debug:
+        ak.dbgln("is delimiter")
+    # Return a <delim-token> with its value set to the current input code point.
+    return token_create_delim(input, tokenizer_input_since(this, start_byte_offset))
+
+# mark: Byte offsets ============================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:1232 Web::CSS::Parser::Tokenizer::current_byte_offset.
+pub func tokenizer_current_byte_offset(this: const Tokenizer*) -> usize:
+    # m_utf8_iterator.ptr() - m_utf8_view.bytes(); both are null only for an empty input.
+    let current = ak.utf8_code_point_iterator_ptr(&this.m_utf8_iterator) else return 0
+    let start = ak.utf8_view_bytes(&this.m_utf8_view) else return 0
+    return (usize)current - (usize)start
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:1237 Web::CSS::Parser::Tokenizer::input_since.
+pub func tokenizer_input_since(this: const Tokenizer*, offset: usize) -> ak.String:
+    return ak.string_substring_from_byte_offset_with_shared_superstring_usize(&this.m_decoded_input, offset, tokenizer_current_byte_offset(this) - offset) else trap("MUST: substring_from_byte_offset_with_shared_superstring")

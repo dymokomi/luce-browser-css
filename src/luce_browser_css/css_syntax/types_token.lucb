@@ -8,12 +8,16 @@
 #       (DESIGN.md §4.4). Regenerate rather than edit, except to fill a field the generator
 #       could not map.
 #
+#       Edited by hand (r30a): Token conforms to TokenStreamToken (four one-line forwards), and
+#       token_new is the default constructor, since a zeroed Token would hold the invalid
+#       String sentinel rather than empty strings.
+#
 #==============================================================================================
 
 # mark: Token ===================================================================================
 
 ## Web::CSS::Parser::Token (Libraries/LibWeb/CSS/Parser/Token.h:28).
-pub struct Token:
+pub struct Token: TokenStreamToken[Token]:
     pub var m_type: TokenType  # C++ default: { Type :: Invalid }
     pub var m_value: ak.FlyString
     pub var m_number_value: Number
@@ -22,9 +26,25 @@ pub struct Token:
     pub var m_start_position: TokenPosition
     pub var m_end_position: TokenPosition
 
+    pub func token_stream_is(type_: TokenType) -> bool: return token_is(&self, type_)
+
+    pub func token_stream_to_string() -> ak.String: return token_to_string(&self)
+
+    pub func token_stream_to_debug_string() -> ak.String: return token_to_debug_string(&self)
+
+    pub func token_stream_make_eof() -> Token: return tokenizer_create_eof_token()
+
 ## The non-zero default member initializers of Web::CSS::Parser::Token; the constructor runs them first.
 pub func token_init_fields(this: Token*):
     this.m_hash_type = TokenHashType.unrestricted
+
+## `Token {}`: the default-constructed token (an Invalid token with empty strings; a zeroed Token
+## would hold the invalid String sentinel instead of the empty strings).
+pub func token_new() -> Token:
+    var token = Token(m_value = ak.fly_string_new(), m_original_source_text = ak.string_new())
+    token_init_fields(&token)
+    number_construct(&token.m_number_value)
+    return token
 
 ## Web::CSS::Parser::Token::Type (Libraries/LibWeb/CSS/Parser/Token.h:30).
 pub enum TokenType as u8:

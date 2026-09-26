@@ -1,0 +1,365 @@
+#==============================================================================================
+#
+#   tokenizer_2 - CSS::Parser::Tokenizer: urls, strings, comments and consume a token
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Parser/Tokenizer.cpp (lines 577-962: consume_a_url_token through
+#       consume_comments). Lines 1-576 are tokenizer_1, lines 963-1242 tokenizer_3.
+#
+#==============================================================================================
+
+# mark: URLs ====================================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:579 Web::CSS::Parser::Tokenizer::consume_a_url_token.
+# https://www.w3.org/TR/css-syntax-3/#consume-url-token
+pub func tokenizer_consume_a_url_token(this: Tokenizer*, start_byte_offset: usize) -> Token:
+    # This section describes how to consume a url token from a stream of code points.
+    # It returns either a <url-token> or a <bad-url-token>.
+    #
+    # Note: This algorithm assumes that the initial "url(" has already been consumed.
+    # This algorithm also assumes that it’s being called to consume an "unquoted" value,
+    # like url(foo). A quoted value, like url("foo"), is parsed as a <function-token>.
+    # Consume an ident-like token automatically handles this distinction; this algorithm
+    # shouldn’t be called directly otherwise.
+
+    # 1. Initially create a <url-token> with its value set to the empty string.
+    var builder = ak.string_builder_new()
+
+    # 2. Consume as much whitespace as possible.
+    tokenizer_consume_as_much_whitespace_as_possible(this)
+
+    # 3. Repeatedly consume the next input code point from the stream:
+    while true:
+        var input = tokenizer_next_code_point(this)
+
+        # U+0029 RIGHT PARENTHESIS ())
+        if is_right_paren(input):
+            # Return the <url-token>.
+            return token_create_url(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, start_byte_offset))
+
+        # EOF
+        if is_eof(input):
+            # This is a parse error. Return the <url-token>.
+            log_parse_error()
+            return token_create_url(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, start_byte_offset))
+
+        # whitespace
+        if is_whitespace(input):
+            # Consume as much whitespace as possible.
+            tokenizer_consume_as_much_whitespace_as_possible(this)
+
+            # If the next input code point is U+0029 RIGHT PARENTHESIS ()) or EOF, consume it
+            # and return the <url-token> (if EOF was encountered, this is a parse error);
+            input = tokenizer_peek_code_point(this)
+
+            if is_right_paren(input):
+                discard(tokenizer_next_code_point(this))
+                return token_create_url(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, start_byte_offset))
+
+            if is_eof(input):
+                discard(tokenizer_next_code_point(this))
+                log_parse_error()
+                return token_create_url(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, start_byte_offset))
+
+            # otherwise, consume the remnants of a bad url, create a <bad-url-token>, and return it.
+            tokenizer_consume_the_remnants_of_a_bad_url(this)
+            return token_create(TokenType.bad_url, tokenizer_input_since(this, start_byte_offset))
+
+        # U+0022 QUOTATION MARK (")
+        # U+0027 APOSTROPHE (')
+        # U+0028 LEFT PARENTHESIS (()
+        # non-printable code point
+        if is_quotation_mark(input) or is_apostrophe(input) or is_left_paren(input) or is_non_printable_code_point(input):
+            # This is a parse error. Consume the remnants of a bad url, create a <bad-url-token>, and return it.
+            log_parse_error()
+            tokenizer_consume_the_remnants_of_a_bad_url(this)
+            return token_create(TokenType.bad_url, tokenizer_input_since(this, start_byte_offset))
+
+        # U+005C REVERSE SOLIDUS (\)
+        if is_reverse_solidus(input):
+            # If the stream starts with a valid escape,
+            if tokenizer_is_valid_escape_sequence(tokenizer_start_of_input_stream_twin(this)):
+                # consume an escaped code point and append the returned code point to the <url-token>’s value.
+                ak.string_builder_append_code_point(&builder, tokenizer_consume_escaped_code_point(this))
+                continue
+            else:
+                # Otherwise, this is a parse error.
+                log_parse_error()
+                # Consume the remnants of a bad url, create a <bad-url-token>, and return it.
+                tokenizer_consume_the_remnants_of_a_bad_url(this)
+                return token_create(TokenType.bad_url, tokenizer_input_since(this, start_byte_offset))
+
+        # anything else
+        # Append the current input code point to the <url-token>’s value.
+        ak.string_builder_append_code_point(&builder, input)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:672 Web::CSS::Parser::Tokenizer::consume_the_remnants_of_a_bad_url.
+# https://www.w3.org/TR/css-syntax-3/#consume-remnants-of-bad-url
+pub func tokenizer_consume_the_remnants_of_a_bad_url(this: Tokenizer*):
+    # This section describes how to consume the remnants of a bad url from a stream of code points,
+    # "cleaning up" after the tokenizer realizes that it’s in the middle of a <bad-url-token> rather
+    # than a <url-token>. It returns nothing; its sole use is to consume enough of the input stream
+    # to reach a recovery point where normal tokenizing can resume.
+
+    # Repeatedly consume the next input code point from the stream:
+    while true:
+        let input = tokenizer_next_code_point(this)
+
+        # U+0029 RIGHT PARENTHESIS ())
+        # EOF
+        if is_eof(input) or is_right_paren(input):
+            # Return.
+            return
+
+        # the input stream starts with a valid escape
+        if tokenizer_is_valid_escape_sequence(tokenizer_start_of_input_stream_twin(this)):
+            # Consume an escaped code point.
+            # This allows an escaped right parenthesis ("\)") to be encountered without ending
+            # the <bad-url-token>. This is otherwise identical to the "anything else" clause.
+            discard(tokenizer_consume_escaped_code_point(this))
+
+        # anything else
+        # Do nothing.
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:703 Web::CSS::Parser::Tokenizer::consume_as_much_whitespace_as_possible.
+pub func tokenizer_consume_as_much_whitespace_as_possible(this: Tokenizer*):
+    while is_whitespace(tokenizer_peek_code_point(this)):
+        discard(tokenizer_next_code_point(this))
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:710 Web::CSS::Parser::Tokenizer::reconsume_current_input_code_point.
+pub func tokenizer_reconsume_current_input_code_point(this: Tokenizer*):
+    this.m_utf8_iterator = this.m_prev_utf8_iterator
+    this.m_position = this.m_prev_position
+
+# mark: Numbers and escapes =====================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:717 Web::CSS::Parser::Tokenizer::consume_a_numeric_token.
+# https://www.w3.org/TR/css-syntax-3/#consume-numeric-token
+pub func tokenizer_consume_a_numeric_token(this: Tokenizer*) -> Token:
+    # This section describes how to consume a numeric token from a stream of code points.
+    # It returns either a <number-token>, <percentage-token>, or <dimension-token>.
+
+    let start_byte_offset = tokenizer_current_byte_offset(this)
+
+    # Consume a number and let number be the result.
+    let number = tokenizer_consume_a_number(this)
+
+    # If the next 3 input code points would start an ident sequence, then:
+    if tokenizer_would_start_an_ident_sequence(tokenizer_peek_triplet(this)):
+        # 1. Create a <dimension-token> with the same value and type flag as number,
+        #    and a unit set initially to the empty string.
+
+        # 2. Consume an ident sequence. Set the <dimension-token>’s unit to the returned value.
+        let unit_ = tokenizer_consume_an_ident_sequence(this)
+        assert(not ak.fly_string_is_empty(&unit_))
+        # NOTE: We intentionally store this in the `value`, to save space.
+
+        # 3. Return the <dimension-token>.
+        return token_create_dimension_number(number, unit_, tokenizer_input_since(this, start_byte_offset))
+
+    # Otherwise, if the next input code point is U+0025 PERCENTAGE SIGN (%), consume it.
+    if is_percent(tokenizer_peek_code_point(this)):
+        discard(tokenizer_next_code_point(this))
+
+        # Create a <percentage-token> with the same value as number, and return it.
+        return token_create_percentage(number, tokenizer_input_since(this, start_byte_offset))
+
+    # Otherwise, create a <number-token> with the same value and type flag as number, and return it.
+    return token_create_number(number, tokenizer_input_since(this, start_byte_offset))
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:754 Web::CSS::Parser::Tokenizer::would_start_a_number.
+# https://www.w3.org/TR/css-syntax-3/#starts-with-a-number
+pub func tokenizer_would_start_a_number(values: U32Triplet) -> bool:
+    # This section describes how to check if three code points would start a number.
+    # The algorithm described here can be called explicitly with three code points,
+    # or can be called with the input stream itself. In the latter case, the three
+    # code points in question are the current input code point and the next two input
+    # code points, in that order.
+    #
+    # Note: This algorithm will not consume any additional code points.
+
+    # Look at the first code point:
+
+    # U+002B PLUS SIGN (+)
+    # U+002D HYPHEN-MINUS (-)
+    if is_plus_sign(values.first) or is_hyphen_minus(values.first):
+        # If the second code point is a digit, return true.
+        if is_digit(values.second):
+            return true
+
+        # Otherwise, if the second code point is a U+002E FULL STOP (.) and the third
+        # code point is a digit, return true.
+        if is_full_stop(values.second) and is_digit(values.third):
+            return true
+
+        # Otherwise, return false.
+        return false
+
+    # U+002E FULL STOP (.)
+    if is_full_stop(values.first):
+        # If the second code point is a digit, return true. Otherwise, return false.
+        return is_digit(values.second)
+
+    # digit
+    if is_digit(values.first):
+        # Return true.
+        return true
+
+    # anything else
+    # Return false.
+    return false
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:798 Web::CSS::Parser::Tokenizer::is_valid_escape_sequence.
+# https://www.w3.org/TR/css-syntax-3/#starts-with-a-valid-escape
+pub func tokenizer_is_valid_escape_sequence(values: U32Twin) -> bool:
+    # This section describes how to check if two code points are a valid escape.
+    # The algorithm described here can be called explicitly with two code points,
+    # or can be called with the input stream itself. In the latter case, the two
+    # code points in question are the current input code point and the next input
+    # code point, in that order.
+    #
+    # Note: This algorithm will not consume any additional code point.
+
+    # If the first code point is not U+005C REVERSE SOLIDUS (\), return false.
+    if not is_reverse_solidus(values.first):
+        return false
+
+    # Otherwise, if the second code point is a newline, return false.
+    if is_newline(values.second):
+        return false
+
+    # Otherwise, return true.
+    return true
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:821 Web::CSS::Parser::Tokenizer::would_start_an_ident_sequence.
+# https://www.w3.org/TR/css-syntax-3/#would-start-an-identifier
+pub func tokenizer_would_start_an_ident_sequence(values: U32Triplet) -> bool:
+    # This section describes how to check if three code points would start an ident sequence.
+    # The algorithm described here can be called explicitly with three code points, or
+    # can be called with the input stream itself. In the latter case, the three code
+    # points in question are the current input code point and the next two input code
+    # points, in that order.
+    #
+    # Note: This algorithm will not consume any additional code points.
+
+    # Look at the first code point:
+
+    # U+002D HYPHEN-MINUS
+    if is_hyphen_minus(values.first):
+        # If the second code point is a name-start code point or a U+002D HYPHEN-MINUS,
+        # or the second and third code points are a valid escape, return true.
+        if is_ident_start_code_point(values.second) or is_hyphen_minus(values.second) or tokenizer_is_valid_escape_sequence(u32_triplet_to_twin_23(&values)):
+            return true
+        # Otherwise, return false.
+        return false
+
+    # name-start code point
+    if is_ident_start_code_point(values.first):
+        # Return true.
+        return true
+
+    # U+005C REVERSE SOLIDUS (\)
+    if is_reverse_solidus(values.first):
+        # If the first and second code points are a valid escape, return true.
+        if tokenizer_is_valid_escape_sequence(u32_triplet_to_twin_12(&values)):
+            return true
+        # Otherwise, return false.
+        return false
+
+    # anything else
+    # Return false.
+    return false
+
+# mark: Strings and comments ====================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:864 Web::CSS::Parser::Tokenizer::consume_string_token.
+# https://www.w3.org/TR/css-syntax-3/#consume-string-token
+pub func tokenizer_consume_string_token(this: Tokenizer*, ending_code_point: u32) -> Token:
+    # This section describes how to consume a string token from a stream of code points.
+    # It returns either a <string-token> or <bad-string-token>.
+    #
+    # This algorithm may be called with an ending code point, which denotes the code point
+    # that ends the string. If an ending code point is not specified, the current input
+    # code point is used.
+
+    # Initially create a <string-token> with its value set to the empty string.
+    let original_source_text_start_byte_offset_including_quotation_mark = tokenizer_current_byte_offset(this) - 1
+    var builder = ak.string_builder_new()
+
+    # Repeatedly consume the next input code point from the stream:
+    while true:
+        let input = tokenizer_next_code_point(this)
+
+        # ending code point
+        if input == ending_code_point:
+            return token_create_string(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, original_source_text_start_byte_offset_including_quotation_mark))
+
+        # EOF
+        if is_eof(input):
+            # This is a parse error. Return the <string-token>.
+            log_parse_error()
+            return token_create_string(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, original_source_text_start_byte_offset_including_quotation_mark))
+
+        # newline
+        if is_newline(input):
+            # This is a parse error. Reconsume the current input code point, create a
+            # <bad-string-token>, and return it.
+            tokenizer_reconsume_current_input_code_point(this)
+            return token_create(TokenType.bad_string, tokenizer_input_since(this, original_source_text_start_byte_offset_including_quotation_mark))
+
+        # U+005C REVERSE SOLIDUS (\)
+        if is_reverse_solidus(input):
+            # If the next input code point is EOF, do nothing.
+            let next_input = tokenizer_peek_code_point(this)
+            if is_eof(next_input):
+                continue
+
+            # Otherwise, if the next input code point is a newline, consume it.
+            if is_newline(next_input):
+                discard(tokenizer_next_code_point(this))
+                continue
+
+            # Otherwise, (the stream starts with a valid escape) consume an escaped code
+            # point and append the returned code point to the <string-token>’s value.
+            let escaped = tokenizer_consume_escaped_code_point(this)
+            ak.string_builder_append_code_point(&builder, escaped)
+            continue
+
+        # anything else
+        # Append the current input code point to the <string-token>’s value.
+        ak.string_builder_append_code_point(&builder, input)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:927 Web::CSS::Parser::Tokenizer::consume_comments.
+# https://www.w3.org/TR/css-syntax-3/#consume-comment
+pub func tokenizer_consume_comments(this: Tokenizer*):
+    # This section describes how to consume comments from a stream of code points.
+    # It returns nothing.
+
+    # start: (the C++ `goto start` is `continue start`)
+    start: while true:
+        # If the next two input code point are U+002F SOLIDUS (/) followed by a U+002A ASTERISK (*),
+        # consume them and all following code points up to and including the first U+002A ASTERISK (*)
+        # followed by a U+002F SOLIDUS (/), or up to an EOF code point. Return to the start of this step.
+        #
+        # If the preceding paragraph ended by consuming an EOF code point, this is a parse error.
+        #
+        # Return nothing.
+        let twin = tokenizer_peek_twin(this)
+        if not (is_solidus(twin.first) and is_asterisk(twin.second)):
+            return
+
+        discard(tokenizer_next_code_point(this))
+        discard(tokenizer_next_code_point(this))
+
+        while true:
+            let twin_inner = tokenizer_peek_twin(this)
+            if is_eof(twin_inner.first) or is_eof(twin_inner.second):
+                log_parse_error()
+                return
+
+            if is_asterisk(twin_inner.first) and is_solidus(twin_inner.second):
+                discard(tokenizer_next_code_point(this))
+                discard(tokenizer_next_code_point(this))
+                continue start
+
+            discard(tokenizer_next_code_point(this))

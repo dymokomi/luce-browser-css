@@ -1,0 +1,125 @@
+#==============================================================================================
+#
+#   number - CSS::Number: a numeric value with its integer/number type flag
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Number.h (lines 1-108) and LibWeb/CSS/Number.cpp (lines 1-59),
+#       in the header's order with the .cpp bodies in place of their declarations
+#       (round_to_nearest_integer first, as the header declares it). The Formatter<Number>
+#       specialization is number_to_string.
+#
+#==============================================================================================
+
+## Ported from Libraries/LibWeb/CSS/Number.cpp:13 Web::CSS::round_to_nearest_integer.
+pub func round_to_nearest_integer(value: f64) -> i32:
+    # https://drafts.csswg.org/css-values-4/#css-round-to-the-nearest-integer
+    # Unless otherwise specified, in the CSS specifications rounding to the nearest integer requires rounding in
+    # the direction of +∞ when the fractional portion is exactly 0.5.
+    if math.is_nan(value):
+        return 0
+
+    if math.is_infinite(value):
+        if value > 0.0:
+            return ak.i32_max
+
+        return ak.i32_min
+
+    return ak.clamp_to_i32_f64(math.floor(value + 0.5))
+
+## Ported from Libraries/LibWeb/CSS/Number.h:27 Web::CSS::Number::Number.
+pub func number_construct(this: Number*):
+    this.m_value = 0.0
+    this.m_type = NumberType.number
+
+## Ported from Libraries/LibWeb/CSS/Number.h:32 Web::CSS::Number::Number.
+pub func number_construct_number_type(this: Number*, type_: NumberType, value: f64):
+    this.m_value = value
+    this.m_type = type_
+
+## `Number { type, value }`: the value form of number_construct_number_type.
+pub func number_create(type_: NumberType, value: f64) -> Number:
+    var number = Number()
+    number_construct_number_type(&number, type_, value)
+    return number
+
+## Ported from Libraries/LibWeb/CSS/Number.h:38 Web::CSS::Number::type.
+pub func number_type(this: const Number*) -> NumberType:
+    return this.m_type
+
+## Ported from Libraries/LibWeb/CSS/Number.h:39 Web::CSS::Number::value.
+pub func number_value(this: const Number*) -> f64:
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Number.h:40 Web::CSS::Number::integer_value.
+pub func number_integer_value(this: const Number*) -> i32:
+    # https://www.w3.org/TR/css-values-4/#numeric-types
+    # When a value cannot be explicitly supported due to range/precision limitations, it must be converted
+    # to the closest value supported by the implementation, but how the implementation defines "closest"
+    # is explicitly undefined as well.
+
+    return round_to_nearest_integer(this.m_value)
+
+## Ported from Libraries/LibWeb/CSS/Number.h:49 Web::CSS::Number::is_integer.
+pub func number_is_integer(this: const Number*) -> bool:
+    return this.m_type == NumberType.integer or this.m_type == NumberType.integer_with_explicit_sign
+
+## Ported from Libraries/LibWeb/CSS/Number.h:50 Web::CSS::Number::is_integer_with_explicit_sign.
+pub func number_is_integer_with_explicit_sign(this: const Number*) -> bool:
+    return this.m_type == NumberType.integer_with_explicit_sign
+
+## Ported from Libraries/LibWeb/CSS/Number.h:52 Web::CSS::Number::operator+.
+pub func number_add(this: const Number*, other: Number) -> Number:
+    if number_is_integer(this) and number_is_integer(&other):
+        return number_create(NumberType.integer, this.m_value + other.m_value)
+    return number_create(NumberType.number, this.m_value + other.m_value)
+
+## Ported from Libraries/LibWeb/CSS/Number.h:59 Web::CSS::Number::operator-.
+pub func number_sub(this: const Number*, other: Number) -> Number:
+    if number_is_integer(this) and number_is_integer(&other):
+        return number_create(NumberType.integer, this.m_value - other.m_value)
+    return number_create(NumberType.number, this.m_value - other.m_value)
+
+## Ported from Libraries/LibWeb/CSS/Number.h:66 Web::CSS::Number::operator*.
+pub func number_mul(this: const Number*, other: Number) -> Number:
+    if number_is_integer(this) and number_is_integer(&other):
+        return number_create(NumberType.integer, this.m_value * other.m_value)
+    return number_create(NumberType.number, this.m_value * other.m_value)
+
+## Ported from Libraries/LibWeb/CSS/Number.h:73 Web::CSS::Number::operator/.
+pub func number_div(this: const Number*, other: Number) -> Number:
+    return number_create(NumberType.number, this.m_value / other.m_value)
+
+## Ported from Libraries/LibWeb/CSS/Number.cpp:31 Web::CSS::Number::serialize.
+pub func number_serialize(this: const Number*, builder: ak.StringBuilder*, mode: SerializationMode = SerializationMode.normal):
+    discard(mode)
+    if this.m_type == NumberType.integer_with_explicit_sign:
+        string_builder_appendff(builder, "{:+}", [ak.arg_f64(this.m_value)])
+        return
+    if this.m_value == math.infinity:
+        ak.string_builder_append_string_view(builder, ak.sv("infinity"))
+        return
+    if this.m_value == -math.infinity:
+        ak.string_builder_append_string_view(builder, ak.sv("-infinity"))
+        return
+    if math.is_nan(this.m_value):
+        ak.string_builder_append_string_view(builder, ak.sv("NaN"))
+        return
+    serialize_a_number_string_builder(builder, this.m_value)
+
+## Ported from Libraries/LibWeb/CSS/Number.cpp:52 Web::CSS::Number::to_string.
+pub func number_to_string(this: const Number*, mode: SerializationMode = SerializationMode.normal) -> ak.String:
+    var builder = ak.string_builder_new()
+    number_serialize(this, &builder, mode)
+    return ak.string_builder_to_string_without_validation(&builder)
+
+## Ported from Libraries/LibWeb/CSS/Number.h:81 Web::CSS::Number::operator==.
+pub func number_eq(this: const Number*, other: Number) -> bool:
+    return this.m_type == other.m_type and this.m_value == other.m_value
+
+## Ported from Libraries/LibWeb/CSS/Number.h:86 Web::CSS::Number::operator<=>.
+pub func number_cmp(this: const Number*, other: Number) -> i32:
+    if this.m_value < other.m_value:
+        return -1
+    if this.m_value > other.m_value:
+        return 1
+    return 0

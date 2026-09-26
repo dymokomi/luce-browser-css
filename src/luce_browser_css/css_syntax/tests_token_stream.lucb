@@ -1,0 +1,257 @@
+#==============================================================================================
+#
+#   tests_token_stream - TokenStream (Tests/LibWeb/TestCSSTokenStream.cpp) and transactions
+#
+#   DESCRIPTION:
+#       The two test cases of TestCSSTokenStream.cpp (basic, marks), then focused cases pinned
+#       to the donor through a local probe: a stream of ComponentValues (dump_string,
+#       discard_whitespace), StateTransaction rollback and commit through a child, and
+#       tokens_since.
+#
+#==============================================================================================
+
+## `Token::create_ident(name)` with the default (empty) source text.
+func ident_token(name: str) -> Token:
+    return token_create_ident(ak.fly_string_from_str(name), ak.string_new())
+
+## Whether `token` is an ident token named `name`.
+func is_ident_named(token: const Token*, name: str) -> bool:
+    if not token_is(token, TokenType.ident):
+        return false
+    let ident = token_ident(token)
+    let expected = ak.fly_string_from_str(name)
+    return ak.fly_string_eq_fly_string(&ident, &expected)
+
+# mark: TestCSSTokenStream.cpp ==================================================================
+
+noinline func test_token_stream_basic():
+    var tokens = ak.Vector[Token]()
+    ak.vector_append_t(&tokens, ident_token("hello"))
+
+    var stream = token_stream_create(tokens)
+    assert(not token_stream_is_empty(&stream))
+    assert(token_stream_has_next_token(&stream))
+    assert(token_stream_remaining_token_count(&stream) == 1)
+
+    # next_token() doesn't consume it
+    let next = token_stream_next_token(&stream)
+    assert(not token_stream_is_empty(&stream))
+    assert(token_stream_has_next_token(&stream))
+    assert(token_stream_remaining_token_count(&stream) == 1)
+    # Check what the token is
+    assert(token_is(&next, TokenType.ident))
+    assert(is_ident_named(&next, "hello"))
+
+    # consume_a_token() does consume it
+    let consumed = token_stream_consume_a_token(&stream)
+    assert(token_stream_is_empty(&stream))
+    assert(not token_stream_has_next_token(&stream))
+    assert(token_stream_remaining_token_count(&stream) == 0)
+    # Check what the token is
+    assert(token_is(&consumed, TokenType.ident))
+    assert(is_ident_named(&consumed, "hello"))
+
+    # Now, any further tokens should be EOF
+    let after = token_stream_next_token(&stream)
+    assert(token_is(&after, TokenType.end_of_file))
+    let consumed_after = token_stream_consume_a_token(&stream)
+    assert(token_is(&consumed_after, TokenType.end_of_file))
+
+test "TestCSSTokenStream basic":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_token_stream_basic()
+
+noinline func test_token_stream_marks():
+    var tokens = ak.Vector[Token]()
+    let names: str[7] = ["a", "b", "c", "d", "e", "f", "g"]
+    for name in names:
+        ak.vector_append_t(&tokens, ident_token(name))
+    var stream = token_stream_create(tokens)
+
+    token_stream_mark(&stream) # 0
+
+    assert(token_stream_remaining_token_count(&stream) == 7)
+
+    token_stream_discard_a_token(&stream)
+    token_stream_discard_a_token(&stream)
+    token_stream_discard_a_token(&stream)
+
+    assert(token_stream_remaining_token_count(&stream) == 4)
+
+    token_stream_mark(&stream) # 3
+
+    token_stream_discard_a_token(&stream)
+
+    assert(token_stream_remaining_token_count(&stream) == 3)
+
+    token_stream_restore_a_mark(&stream) # Back to 3
+
+    assert(token_stream_remaining_token_count(&stream) == 4)
+
+    token_stream_discard_a_token(&stream)
+    token_stream_discard_a_token(&stream)
+    token_stream_discard_a_token(&stream)
+
+    assert(token_stream_remaining_token_count(&stream) == 1)
+
+    token_stream_mark(&stream) # 6
+
+    token_stream_discard_a_mark(&stream)
+
+    assert(token_stream_remaining_token_count(&stream) == 1)
+
+    token_stream_restore_a_mark(&stream) # Back to 0
+
+    assert(token_stream_remaining_token_count(&stream) == 7)
+
+test "TestCSSTokenStream marks":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_token_stream_marks()
+
+# mark: ComponentValue streams and transactions =================================================
+
+## `rgb(1,  [x]/**/{a:b})` with the names and source texts of the donor probe: a Function
+## holding a number, a comma, whitespace, a [] block, a comment-whitespace and a {} block.
+func sample_function_value() -> ComponentValue:
+    var inner_square = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&inner_square, component_value_from_token(token_create_ident(ak.fly_string_from_str("x"), ak.string_from_str("x"))))
+    let square = SimpleBlock(token = token_create(TokenType.open_square, ak.string_from_str("[")), value = inner_square, end_token = token_create(TokenType.close_square, ak.string_from_str("]")))
+    var inner_curly = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&inner_curly, component_value_from_token(token_create_ident(ak.fly_string_from_str("a"), ak.string_from_str("a"))))
+    ak.vector_append_t(&inner_curly, component_value_from_token(token_create(TokenType.colon, ak.string_from_str(":"))))
+    ak.vector_append_t(&inner_curly, component_value_from_token(token_create_ident(ak.fly_string_from_str("b"), ak.string_from_str("b"))))
+    let curly = SimpleBlock(token = token_create(TokenType.open_curly, ak.string_from_str("{")), value = inner_curly, end_token = token_create(TokenType.close_curly, ak.string_from_str("}")))
+    var arguments = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&arguments, component_value_from_token(token_create_number(number_create(NumberType.integer, 1.0), ak.string_from_str("1"))))
+    ak.vector_append_t(&arguments, component_value_from_token(token_create(TokenType.comma, ak.string_from_str(","))))
+    ak.vector_append_t(&arguments, component_value_from_token(token_create_whitespace(ak.string_from_str("  "))))
+    ak.vector_append_t(&arguments, component_value_from_simple_block(square))
+    ak.vector_append_t(&arguments, component_value_from_token(token_create_whitespace(ak.string_from_str("/**/"))))
+    ak.vector_append_t(&arguments, component_value_from_simple_block(curly))
+    let function = Function(name = ak.fly_string_from_str("rgb"), value = arguments, name_token = token_create_function(ak.fly_string_from_str("rgb"), ak.string_from_str("RGB(")), end_token = token_create(TokenType.close_paren, ak.string_from_str(")")))
+    return component_value_from_function(function)
+
+## Asserts `string` holds `text`.
+func expect_text(string: ak.String, text: str):
+    let actual = ak.string_view_text(ak.string_bytes_as_string_view(&string))
+    if actual != text:
+        print(f"expected: {text}")
+        print(f"actual:   {actual}")
+        assert(false, "string mismatch")
+
+noinline func test_component_values():
+    let value = sample_function_value()
+    expect_text(component_value_to_string(&value), "rgb(1, [x] {a:b})")
+    expect_text(component_value_to_debug_string(&value), "Function: rgb(1, [x] {a:b})")
+    expect_text(component_value_original_source_text(&value), "RGB(1,  [x]/**/{a:b})")
+    assert(component_value_is_function_string_view(&value, ak.sv("RGB")))
+    assert(not component_value_is_function_string_view(&value, ak.sv("hsl")))
+    assert(not component_value_contains_guaranteed_invalid_value(&value))
+    assert(not component_value_contains_attr_tainted_value(&value))
+    let function = component_value_function(&value)
+    let arguments = ak.vector_span_const(&function.value)
+    expect_text(component_value_to_debug_string(&arguments[3]), "Block: [x]")
+    expect_text(component_value_to_debug_string(&arguments[0]), "Token: Number(value=1, number_type=Integer, source=\"1\", start=0:0, end=0:0)")
+    let square = component_value_block(&arguments[3])
+    assert(component_value_is_block(&arguments[3]) and simple_block_is_square(&square))
+    assert(component_value_is(&arguments[1], TokenType.comma))
+
+    let invalid = component_value_from_guaranteed_invalid_value(GuaranteedInvalidValue())
+    expect_text(component_value_to_debug_string(&invalid), "Guaranteed-invalid value")
+    expect_text(component_value_to_string(&invalid), "")
+    assert(component_value_is_guaranteed_invalid(&invalid))
+
+    let delim = component_value_from_token(token_create_delim(0x2f, ak.string_new()))
+    assert(component_value_is_delim(&delim, 0x2f))
+    assert(not component_value_is_delim(&delim, 0x2a))
+    let auto_ident = component_value_from_token(ident_token("Auto"))
+    assert(component_value_is_ident(&auto_ident, ak.sv("auto")))
+
+    # A guaranteed-invalid value or an attr-tainted value anywhere inside marks the whole value.
+    var nested = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&nested, delim)
+    ak.vector_append_t(&nested, invalid)
+    let block = SimpleBlock(token = token_create(TokenType.open_paren, ak.string_new()), value = nested, end_token = token_new())
+    let block_value = component_value_from_simple_block(block)
+    assert(component_value_contains_guaranteed_invalid_value(&block_value))
+    var tainted = component_value_from_token(ident_token("t"))
+    component_value_set_attr_tainted(&tainted)
+    var tainted_list = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&tainted_list, tainted)
+    let tainted_function = component_value_from_function(Function(name = ak.fly_string_from_str("f"), value = tainted_list, name_token = token_new(), end_token = token_new()))
+    assert(component_value_contains_attr_tainted_value(&tainted_function))
+    assert(not component_value_contains_attr_tainted_value(&block_value))
+
+    # operator==: the alternative, its value, and the attr-taint flag.
+    let same = sample_function_value()
+    assert(component_value_eq(&value, &same))
+    assert(not component_value_eq(&value, &delim))
+    let untainted = component_value_from_token(ident_token("t"))
+    assert(not component_value_eq(&tainted, &untainted))
+    assert(component_value_eq(&invalid, &invalid))
+
+test "ComponentValue: strings, source text, lookups and equality":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_component_values()
+
+noinline func test_component_value_stream():
+    var list = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&list, component_value_from_token(token_create_whitespace(ak.string_from_str(" "))))
+    ak.vector_append_t(&list, component_value_from_token(ident_token("a")))
+    ak.vector_append_t(&list, sample_function_value())
+    ak.vector_append_t(&list, component_value_from_token(token_create_whitespace(ak.string_from_str(" "))))
+    var stream = token_stream_create(list)
+    expect_text(token_stream_dump_string(&stream), " argb(1, [x] {a:b}) ")
+    token_stream_discard_whitespace(&stream)
+    let next = token_stream_next_token(&stream)
+    expect_text(component_value_to_string(&next), "a")
+    assert(token_stream_remaining_token_count(&stream) == 3)
+
+    # A transaction that is not committed restores the index when it ends.
+    if true:
+        var transaction = token_stream_begin_transaction(&stream)
+        defer state_transaction_destroy(&transaction)
+        discard(token_stream_consume_a_token(&stream))
+        discard(token_stream_consume_a_token(&stream))
+        assert(token_stream_current_index(&stream) == 3)
+    assert(token_stream_current_index(&stream) == 1)
+
+    # Committing a child commits its parent.
+    if true:
+        var transaction = token_stream_begin_transaction(&stream)
+        defer state_transaction_destroy(&transaction)
+        discard(token_stream_consume_a_token(&stream))
+        var child = state_transaction_create_child(&transaction)
+        defer state_transaction_destroy(&child)
+        discard(token_stream_consume_a_token(&stream))
+        state_transaction_commit(&child)
+    assert(token_stream_current_index(&stream) == 3)
+    assert(token_stream_tokens_since(&stream, 0).length == 3)
+    assert(token_stream_tokens_since(&stream, 4).length == 0)
+
+    let last = token_stream_consume_a_token(&stream)
+    expect_text(component_value_to_debug_string(&last), "Token: Whitespace(source=\" \", start=0:0, end=0:0)")
+    assert(token_stream_is_empty(&stream))
+    # Past the end, the stream answers its EOF: a ComponentValue holding an EOF token.
+    let eof = token_stream_peek_token(&stream, 5)
+    assert(component_value_is(&eof, TokenType.end_of_file))
+
+    # of_single_token views its one token.
+    let single_token = ident_token("only")
+    var single = token_stream_of_single_token(&single_token)
+    assert(token_stream_remaining_token_count(&single) == 1)
+    let only = token_stream_consume_a_token(&single)
+    assert(is_ident_named(&only, "only"))
+    assert(token_stream_is_empty(&single))
+
+test "TokenStream of ComponentValues, transactions and tokens_since":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_component_value_stream()

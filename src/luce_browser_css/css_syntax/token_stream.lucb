@@ -1,0 +1,208 @@
+#==============================================================================================
+#
+#   token_stream - CSS::Parser::TokenStream<T>: the CSS token stream over Tokens or
+#                  ComponentValues
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Parser/TokenStream.h (lines 1-212). The template's T is Token or
+#       ComponentValue; its calls on a T go through the TokenStreamToken interface
+#       (types_token_stream). The C++ returns `T const&` into the tokens (or into m_eof); the
+#       port returns the T by value, which shares the token's strings and vectors.
+#
+#       StateTransaction's destructor is state_transaction_destroy, called where the C++
+#       transaction goes out of scope:
+#
+#           var transaction = token_stream_begin_transaction(tokens)
+#           defer state_transaction_destroy(&transaction)
+#
+#==============================================================================================
+
+# mark: StateTransaction ========================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:24 Web::CSS::Parser::TokenStream::StateTransaction::StateTransaction.
+pub func state_transaction_construct[T](this: StateTransaction*, token_stream: TokenStream[T]*):
+    this.m_parent = none
+    this.m_token_stream_index = &token_stream.m_index
+    this.m_saved_index = token_stream.m_index
+    this.m_commit = false
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:30 Web::CSS::Parser::TokenStream::StateTransaction::~StateTransaction.
+pub func state_transaction_destroy(this: StateTransaction*):
+    if not this.m_commit:
+        *this.m_token_stream_index = this.m_saved_index
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:36 Web::CSS::Parser::TokenStream::StateTransaction::create_child.
+## The child refers to `this`, which must stay where it is while the child lives (as in C++).
+pub func state_transaction_create_child(this: StateTransaction*) -> StateTransaction:
+    var child = StateTransaction(m_token_stream_index = this.m_token_stream_index)
+    state_transaction_construct_state_transaction(&child, this)
+    return child
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:38 Web::CSS::Parser::TokenStream::StateTransaction::commit.
+pub func state_transaction_commit(this: StateTransaction*):
+    this.m_commit = true
+    if let parent = this.m_parent:
+        state_transaction_commit(parent)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:46 Web::CSS::Parser::TokenStream::StateTransaction::StateTransaction
+## (the private constructor from a parent transaction).
+func state_transaction_construct_state_transaction(this: StateTransaction*, parent: StateTransaction*):
+    this.m_parent = parent
+    this.m_token_stream_index = parent.m_token_stream_index
+    this.m_saved_index = *parent.m_token_stream_index
+    this.m_commit = false
+
+# mark: TokenStream =============================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:58 Web::CSS::Parser::TokenStream::TokenStream<T>.
+## The stream views `tokens`, which must outlive it (as in C++).
+pub func token_stream_construct_span_t[T: TokenStreamToken[T]](this: TokenStream[T]*, tokens: const T[]):
+    this.m_tokens = tokens
+    this.m_index = 0
+    this.m_marked_indexes = ak.Vector[usize]()
+    this.m_eof = token_stream_make_eof(this)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:64 Web::CSS::Parser::TokenStream::TokenStream<T>.
+## The stream views the vector's elements, which must outlive it and stay in place (as in C++).
+pub func token_stream_construct_vector[T: TokenStreamToken[T]](this: TokenStream[T]*, tokens: ak.Vector[T]):
+    this.m_tokens = ak.vector_span_const(&tokens)
+    this.m_index = 0
+    this.m_marked_indexes = ak.Vector[usize]()
+    this.m_eof = token_stream_make_eof(this)
+
+## `TokenStream stream { tokens }` over a span: the value form of token_stream_construct_span_t.
+pub func token_stream_create_span[T: TokenStreamToken[T]](tokens: const T[]) -> TokenStream[T]:
+    # The constructor fills every field; make_eof() does not read the stream.
+    var stream: TokenStream[T] = ---
+    token_stream_construct_span_t(&stream, tokens)
+    return stream
+
+## `TokenStream stream { tokens }` over a vector: the value form of token_stream_construct_vector.
+pub func token_stream_create[T: TokenStreamToken[T]](tokens: ak.Vector[T]) -> TokenStream[T]:
+    # The constructor fills every field; make_eof() does not read the stream.
+    var stream: TokenStream[T] = ---
+    token_stream_construct_vector(&stream, tokens)
+    return stream
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:70 Web::CSS::Parser::TokenStream::of_single_token.
+## The stream views `token`, which must outlive it (C++ takes it by reference).
+pub func token_stream_of_single_token[T: TokenStreamToken[T]](token: const T*) -> TokenStream[T]:
+    return token_stream_create_span(T[]((T*)token, 1))
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:79 Web::CSS::Parser::TokenStream::next_token.
+# https://drafts.csswg.org/css-syntax/#token-stream-next-token
+pub func token_stream_next_token[T](this: const TokenStream[T]*) -> T:
+    # The item of tokens at index.
+    # If that index would be out-of-bounds past the end of the list, it’s instead an <eof-token>.
+    if this.m_index < this.m_tokens.length:
+        return this.m_tokens[this.m_index]
+    return this.m_eof
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:89 Web::CSS::Parser::TokenStream::peek_token.
+## NB: If offset is 0, this is the same as next_token().
+pub func token_stream_peek_token[T](this: TokenStream[T]*, offset: usize) -> T:
+    if this.m_index + offset < this.m_tokens.length:
+        return this.m_tokens[this.m_index + offset]
+    return this.m_eof
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:97 Web::CSS::Parser::TokenStream::is_empty.
+# https://drafts.csswg.org/css-syntax/#token-stream-empty
+pub func token_stream_is_empty[T: TokenStreamToken[T]](this: const TokenStream[T]*) -> bool:
+    # A token stream is empty if the next token is an <eof-token>.
+    let next = token_stream_next_token(this)
+    return next.token_stream_is(TokenType.end_of_file)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:104 Web::CSS::Parser::TokenStream::consume_a_token.
+# https://drafts.csswg.org/css-syntax/#token-stream-consume-a-token
+pub func token_stream_consume_a_token[T](this: TokenStream[T]*) -> T:
+    # Let token be the next token. Increment index, then return token.
+    let token = token_stream_next_token(this)
+    this.m_index += 1
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:113 Web::CSS::Parser::TokenStream::discard_a_token.
+# https://drafts.csswg.org/css-syntax/#token-stream-discard-a-token
+pub func token_stream_discard_a_token[T: TokenStreamToken[T]](this: TokenStream[T]*):
+    # If the token stream is not empty, increment index.
+    if not token_stream_is_empty(this):
+        this.m_index += 1
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:121 Web::CSS::Parser::TokenStream::mark.
+# https://drafts.csswg.org/css-syntax/#token-stream-mark
+pub func token_stream_mark[T](this: TokenStream[T]*):
+    # Append index to marked indexes.
+    ak.vector_append_t(&this.m_marked_indexes, this.m_index)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:128 Web::CSS::Parser::TokenStream::restore_a_mark.
+# https://drafts.csswg.org/css-syntax/#token-stream-restore-a-mark
+pub func token_stream_restore_a_mark[T](this: TokenStream[T]*):
+    # Pop from marked indexes, and set index to the popped value.
+    this.m_index = ak.vector_take_last(&this.m_marked_indexes)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:135 Web::CSS::Parser::TokenStream::discard_a_mark.
+# https://drafts.csswg.org/css-syntax/#token-stream-discard-a-mark
+pub func token_stream_discard_a_mark[T](this: TokenStream[T]*):
+    # Pop from marked indexes, and do nothing with the popped value.
+    discard(ak.vector_take_last(&this.m_marked_indexes))
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:142 Web::CSS::Parser::TokenStream::discard_whitespace.
+# https://drafts.csswg.org/css-syntax/#token-stream-discard-whitespace
+pub func token_stream_discard_whitespace[T: TokenStreamToken[T]](this: TokenStream[T]*):
+    # While the next token is a <whitespace-token>, discard a token.
+    while token_stream_next_token(this).token_stream_is(TokenType.whitespace):
+        token_stream_discard_a_token(this)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:149 Web::CSS::Parser::TokenStream::has_next_token.
+pub func token_stream_has_next_token[T: TokenStreamToken[T]](this: TokenStream[T]*) -> bool:
+    return not token_stream_is_empty(this)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:154 Web::CSS::Parser::TokenStream::begin_transaction.
+pub func token_stream_begin_transaction[T](this: TokenStream[T]*) -> StateTransaction:
+    var transaction = StateTransaction(m_token_stream_index = &this.m_index)
+    state_transaction_construct(&transaction, this)
+    return transaction
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:156 Web::CSS::Parser::TokenStream::remaining_token_count.
+pub func token_stream_remaining_token_count[T](this: const TokenStream[T]*) -> usize:
+    if this.m_tokens.length > this.m_index:
+        return this.m_tokens.length - this.m_index
+    return 0
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:163 Web::CSS::Parser::TokenStream::current_index.
+pub func token_stream_current_index[T](this: const TokenStream[T]*) -> usize:
+    return this.m_index
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:165 Web::CSS::Parser::TokenStream::tokens_since.
+pub func token_stream_tokens_since[T](this: const TokenStream[T]*, start: usize) -> const T[]:
+    if start > this.m_index:
+        var empty: const T[]
+        return empty
+    return this.m_tokens[start..<this.m_index]
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:172 Web::CSS::Parser::TokenStream::dump_all_tokens.
+pub func token_stream_dump_all_tokens[T: TokenStreamToken[T]](this: TokenStream[T]*):
+    ak.dbgln("Dumping all tokens:")
+    for i in 0..<this.m_tokens.length:
+        let token = &this.m_tokens[i]
+        let debug_string = token.token_stream_to_debug_string()
+        let text = ak.string_view_text(ak.string_bytes_as_string_view(&debug_string))
+        if i == this.m_index:
+            ak.dbgln(f"-> {text}")
+        else:
+            ak.dbgln(f"   {text}")
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:184 Web::CSS::Parser::TokenStream::dump_string.
+pub func token_stream_dump_string[T: TokenStreamToken[T]](this: TokenStream[T]*) -> ak.String:
+    # MUST(String::join(""sv, m_tokens)): each token through its Formatter (to_string).
+    var builder = ak.string_builder_new()
+    for i in 0..<this.m_tokens.length:
+        let string = this.m_tokens[i].token_stream_to_string()
+        string_builder_append_string(&builder, &string)
+    return ak.string_builder_to_string_without_validation(&builder)
+
+## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:199 Web::CSS::Parser::TokenStream::make_eof.
+func token_stream_make_eof[T: TokenStreamToken[T]](this: TokenStream[T]*) -> T:
+    # if constexpr (IsSame<T, Token>) Tokenizer::create_eof_token(), and for ComponentValue
+    # ComponentValue(Tokenizer::create_eof_token()): the T's token_stream_make_eof, which does not
+    # read its receiver (m_eof may not be constructed yet).
+    return this.m_eof.token_stream_make_eof()

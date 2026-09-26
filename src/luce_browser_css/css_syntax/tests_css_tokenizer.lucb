@@ -1,0 +1,157 @@
+#==============================================================================================
+#
+#   tests_css_tokenizer - the CSS tokenizer corpus (Tests/LibWeb/CSSTokenizer)
+#
+#   DESCRIPTION:
+#       The Luce driver of Ladybird's tokenizer corpus (tests/css_tokenizer, copied from the
+#       donor) and of this port's extra corpus (tests/css_tokenizer_extra: edge cases whose
+#       expectations were written by the donor's css-tokenizer program locally), done the way test-css-tokenizer.py
+#       runs the css-tokenizer program (Tests/LibWeb/css-tokenizer.cpp): tokenize each
+#       <corpus>/input/<name>.css in the encoding its <name>.css.encoding names
+#       (utf-8 without one), print every token's to_debug_string() on its own line, and compare
+#       with expected/<name>.txt, both stripped of surrounding whitespace. Paths are relative to
+#       the package root, where test.sh runs.
+#
+#==============================================================================================
+
+# mark: Reading the corpus ======================================================================
+
+extern func fopen(path: const u8*, mode: const u8*) -> void*?
+extern func fread(buffer: void*, size: usize, count: usize, stream: void*) -> usize
+extern func fclose(stream: void*) -> i32
+
+## The bytes of the file at `path` (a NUL-terminated path), or none when it cannot be opened.
+func read_test_file(path: const u8*) -> u8[]?:
+    let stream = fopen(path, "rb".bytes.data) else return none
+    defer discard(fclose(stream))
+    var data = new u8[1 << 12] else trap("out of memory")
+    var used: usize = 0
+    while true:
+        if used == data.length:
+            let grown = new u8[data.length * 2] else trap("out of memory")
+            for index in 0..<used:
+                grown[index] = data[index]
+            data = grown
+        let count = fread(&data[used], 1, data.length - used, stream)
+        if count == 0:
+            break
+        used += count
+    return data[..<used]
+
+## `path` + NUL, for fopen.
+func c_path(builder: ak.StringBuilder*, parts: const str[]) -> const u8*:
+    for part in parts:
+        ak.string_builder_append_string_view(builder, ak.sv(part))
+    ak.string_builder_append_u8(builder, 0)
+    return ak.string_builder_string_view(builder).m_characters else trap("empty path")
+
+## `bytes` without the ASCII whitespace Python's str.strip() removes at both ends.
+func strip_whitespace(bytes: const u8[]) -> const u8[]:
+    var start: usize = 0
+    var end = bytes.length
+    while start < end and (bytes[start] == ' ' or bytes[start] == '\n' or bytes[start] == '\r' or bytes[start] == '\t' or bytes[start] == 0x0b or bytes[start] == 0x0c):
+        start += 1
+    while end > start and (bytes[end - 1] == ' ' or bytes[end - 1] == '\n' or bytes[end - 1] == '\r' or bytes[end - 1] == '\t' or bytes[end - 1] == 0x0b or bytes[end - 1] == 0x0c):
+        end -= 1
+    return bytes[start..<end]
+
+# mark: The corpora =============================================================================
+
+## Runs one corpus file; answers whether its tokens match the expected dump.
+noinline func run_css_tokenizer_case(corpus: str, name: str) -> bool:
+    var input_path = ak.string_builder_new()
+    let input = read_test_file(c_path(&input_path, [corpus, "/input/", name, ".css"])) else trap("cannot read a corpus input")
+    var encoding_path = ak.string_builder_new()
+    var encoding = ak.sv("utf-8")
+    if let encoding_file = read_test_file(c_path(&encoding_path, [corpus, "/input/", name, ".css.encoding"])):
+        var view = ak.StringView()
+        ak.string_view_construct_span_u8(&view, strip_whitespace(encoding_file))
+        encoding = view
+    var expected_path = ak.string_builder_new()
+    let expected = read_test_file(c_path(&expected_path, [corpus, "/expected/", name, ".txt"])) else trap("cannot read a corpus expectation")
+
+    var input_view = ak.StringView()
+    ak.string_view_construct_span_u8(&input_view, input)
+    let tokens = tokenizer_tokenize_string_view(input_view, encoding)
+    var output = ak.string_builder_new()
+    for token in &ak.vector_span_const(&tokens):
+        let line = token_to_debug_string(token)
+        string_builder_append_string(&output, &line)
+        ak.string_builder_append_u8(&output, '\n')
+    let actual_view = ak.string_builder_string_view(&output)
+    let actual = strip_whitespace(u8[]((u8*)(actual_view.m_characters else trap("no output")), actual_view.m_length))
+    let wanted = strip_whitespace(expected)
+    if actual.length == wanted.length:
+        var same = true
+        for index in 0..<actual.length:
+            if actual[index] != wanted[index]:
+                same = false
+                break
+        if same:
+            return true
+    print(f"CSS tokens do not match for {corpus}/input/{name}.css!")
+    print("--- expected")
+    print((str)wanted)
+    print("--- actual")
+    print((str)actual)
+    return false
+
+## The corpus: every input file of Tests/LibWeb/CSSTokenizer/input.
+let css_tokenizer_cases: str[15] = [
+    "at-hash-function-delim",
+    "basic-rules",
+    "brackets-and-cdo-cdc",
+    "comments-and-whitespace",
+    "malformed-bad-string-recovery",
+    "malformed-bad-url-recovery",
+    "malformed-invalid-escape-extra-braces",
+    "malformed-unterminated-comment",
+    "malformed-unterminated-string-eof",
+    "numeric-clamping",
+    "numeric-tokens",
+    "strings-and-escapes",
+    "urls-and-bad-url",
+    "utf-16le-crlf",
+    "windows-1252-curly-quotes",
+]
+
+## This port's extra corpus: every input file of tests/css_tokenizer_extra/input.
+let css_tokenizer_extra_cases: str[11] = [
+    "columns-multibyte",
+    "comments-edge",
+    "empty",
+    "filtered-code-points",
+    "hashes-at-keywords",
+    "idents-and-escapes",
+    "numbers-edge",
+    "shift-jis-basic",
+    "strings-edge",
+    "urls-edge",
+    "utf-16be-basic",
+]
+
+noinline func test_css_tokenizer_corpus():
+    var failed: usize = 0
+    for name in css_tokenizer_cases:
+        if not run_css_tokenizer_case("tests/css_tokenizer", name):
+            failed += 1
+    assert(failed == 0, "CSS tokenizer corpus failures")
+
+noinline func test_css_tokenizer_extra_corpus():
+    var failed: usize = 0
+    for name in css_tokenizer_extra_cases:
+        if not run_css_tokenizer_case("tests/css_tokenizer_extra", name):
+            failed += 1
+    assert(failed == 0, "CSS tokenizer extra corpus failures")
+
+test "Tests/LibWeb/CSSTokenizer corpus":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_css_tokenizer_corpus()
+
+test "tests/css_tokenizer_extra corpus (pinned to the donor's css-tokenizer)":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_css_tokenizer_extra_corpus()

@@ -1,0 +1,209 @@
+#==============================================================================================
+#
+#   tests_types - AtRule and QualifiedRule walkers, SimpleBlock and Function strings
+#
+#   DESCRIPTION:
+#       Focused cases for Parser/Types.cpp (the donor has no unit test for it): which children
+#       each rule-list walker visits and which it reports through the engine's ErrorReporter
+#       hook, and the block/function serializations.
+#
+#==============================================================================================
+
+# mark: Rule-list walkers =======================================================================
+
+## The reports the test reporter received, as "outer>inner" lines.
+var reported_invalid_rule_locations: ak.StringBuilder
+
+## A test ErrorReporter: records each InvalidRuleLocationError.
+func record_invalid_rule_location(outer_rule_name: ak.FlyString, inner_rule_name: ak.FlyString):
+    ak.string_builder_append_string_view(&reported_invalid_rule_locations, ak.fly_string_bytes_as_string_view(&outer_rule_name))
+    ak.string_builder_append_u8(&reported_invalid_rule_locations, '>')
+    ak.string_builder_append_string_view(&reported_invalid_rule_locations, ak.fly_string_bytes_as_string_view(&inner_rule_name))
+    ak.string_builder_append_u8(&reported_invalid_rule_locations, ';')
+
+## What the visitors saw.
+struct RuleVisits:
+    var at_rules: ak.StringBuilder
+    var qualified_rules: usize
+    var declarations: ak.StringBuilder
+
+func record_at_rule(context: void*?, at_rule: const AtRule*):
+    let visits = (RuleVisits*)(context else trap("no visits"))
+    ak.string_builder_append_string_view(&visits.at_rules, ak.fly_string_bytes_as_string_view(&at_rule.name))
+    ak.string_builder_append_u8(&visits.at_rules, ';')
+
+func record_qualified_rule(context: void*?, qualified_rule: const QualifiedRule*):
+    discard(qualified_rule)
+    let visits = (RuleVisits*)(context else trap("no visits"))
+    visits.qualified_rules += 1
+
+func record_declaration(context: void*?, declaration: const Declaration*):
+    let visits = (RuleVisits*)(context else trap("no visits"))
+    ak.string_builder_append_string_view(&visits.declarations, ak.fly_string_bytes_as_string_view(&declaration.name))
+    ak.string_builder_append_u8(&visits.declarations, ';')
+
+func record_rule(context: void*?, rule: const Rule*):
+    match *rule:
+        .at_rule(at_rule): record_at_rule(context, &at_rule)
+        .qualified_rule(qualified_rule): record_qualified_rule(context, &qualified_rule)
+
+func new_rule_visits() -> RuleVisits:
+    return RuleVisits(at_rules = ak.string_builder_new(), declarations = ak.string_builder_new())
+
+func declaration_named(name: str) -> Declaration:
+    return Declaration(name = ak.fly_string_from_str(name), important = Important.no)
+
+## `@outer { @inner; a:1; x {} b:1 }` as the parser builds it: an at-rule, a declaration
+## list, a qualified rule, a second declaration list.
+func sample_at_rule() -> AtRule:
+    var children = ak.Vector[RuleOrListOfDeclarations]()
+    let inner = AtRule(name = ak.fly_string_from_str("inner"))
+    ak.vector_append_t(&children, RuleOrListOfDeclarations.rule(Rule.at_rule(inner)))
+    var first = ak.Vector[Declaration]()
+    ak.vector_append_t(&first, declaration_named("a"))
+    ak.vector_append_t(&children, RuleOrListOfDeclarations.vector_declaration(first))
+    ak.vector_append_t(&children, RuleOrListOfDeclarations.rule(Rule.qualified_rule(QualifiedRule())))
+    var second = ak.Vector[Declaration]()
+    ak.vector_append_t(&second, declaration_named("b"))
+    ak.vector_append_t(&children, RuleOrListOfDeclarations.vector_declaration(second))
+    return AtRule(name = ak.fly_string_from_str("outer"), child_rules_and_lists_of_declarations = children, is_block_rule = true)
+
+## The reports received since the last reset_reports, as text.
+func reports_text() -> str:
+    return ak.string_view_text(ak.string_builder_string_view(&reported_invalid_rule_locations))
+
+## Forgets the reports received so far.
+func reset_reports():
+    reported_invalid_rule_locations = ak.string_builder_new()
+
+noinline func test_at_rule_walkers():
+    invalid_rule_location_reporter = record_invalid_rule_location
+    let rule = sample_at_rule()
+
+    # for_each visits everything.
+    reset_reports()
+    var all = new_rule_visits()
+    at_rule_for_each(&rule,
+        ak.Function1[const AtRule*, unit](call = record_at_rule, context = &all),
+        ak.Function1[const QualifiedRule*, unit](call = record_qualified_rule, context = &all),
+        ak.Function1[const Declaration*, unit](call = record_declaration, context = &all))
+    assert(ak.string_view_text(ak.string_builder_string_view(&all.at_rules)) == "inner;")
+    assert(all.qualified_rules == 1)
+    assert(ak.string_view_text(ak.string_builder_string_view(&all.declarations)) == "a;b;")
+    assert(reports_text() == "")
+
+    # <declaration-list>: the at-rule and the qualified rule are reported.
+    reset_reports()
+    var declarations = new_rule_visits()
+    at_rule_for_each_as_declaration_list(&rule, ak.Function1[const Declaration*, unit](call = record_declaration, context = &declarations))
+    assert(ak.string_view_text(ak.string_builder_string_view(&declarations.declarations)) == "a;b;")
+    assert(reports_text() == "@outer>@inner;@outer>qualified-rule;")
+
+    # <qualified-rule-list>: the at-rule and both declaration lists are reported.
+    reset_reports()
+    var qualified = new_rule_visits()
+    at_rule_for_each_as_qualified_rule_list(&rule, ak.Function1[const QualifiedRule*, unit](call = record_qualified_rule, context = &qualified))
+    assert(qualified.qualified_rules == 1)
+    assert(reports_text() == "@outer>@inner;@outer>list-of-declarations;@outer>list-of-declarations;")
+
+    # <at-rule-list>: the declaration lists and the qualified rule are reported.
+    reset_reports()
+    var at_rules = new_rule_visits()
+    at_rule_for_each_as_at_rule_list(&rule, ak.Function1[const AtRule*, unit](call = record_at_rule, context = &at_rules))
+    assert(ak.string_view_text(ak.string_builder_string_view(&at_rules.at_rules)) == "inner;")
+    assert(reports_text() == "@outer>list-of-declarations;@outer>qualified-rule;@outer>list-of-declarations;")
+
+    # <declaration-rule-list>: only the qualified rule is reported.
+    reset_reports()
+    var mixed = new_rule_visits()
+    at_rule_for_each_as_declaration_rule_list(&rule,
+        ak.Function1[const AtRule*, unit](call = record_at_rule, context = &mixed),
+        ak.Function1[const Declaration*, unit](call = record_declaration, context = &mixed))
+    assert(ak.string_view_text(ak.string_builder_string_view(&mixed.at_rules)) == "inner;")
+    assert(ak.string_view_text(ak.string_builder_string_view(&mixed.declarations)) == "a;b;")
+    assert(reports_text() == "@outer>qualified-rule;")
+
+    # <rule-list>: both declaration lists are reported.
+    reset_reports()
+    var rules = new_rule_visits()
+    at_rule_for_each_as_rule_list(&rule, ak.Function1[const Rule*, unit](call = record_rule, context = &rules))
+    assert(ak.string_view_text(ak.string_builder_string_view(&rules.at_rules)) == "inner;")
+    assert(rules.qualified_rules == 1)
+    assert(reports_text() == "@outer>list-of-declarations;@outer>list-of-declarations;")
+
+    # QualifiedRule: its own declarations, then the declaration lists among its children.
+    reset_reports()
+    var own = ak.Vector[Declaration]()
+    ak.vector_append_t(&own, declaration_named("color"))
+    var child_rules = ak.Vector[RuleOrListOfDeclarations]()
+    ak.vector_append_t(&child_rules, RuleOrListOfDeclarations.rule(Rule.qualified_rule(QualifiedRule())))
+    var nested = ak.Vector[Declaration]()
+    ak.vector_append_t(&nested, declaration_named("width"))
+    ak.vector_append_t(&child_rules, RuleOrListOfDeclarations.vector_declaration(nested))
+    let qualified_rule = QualifiedRule(declarations = own, child_rules = child_rules)
+    var style = new_rule_visits()
+    qualified_rule_for_each_as_declaration_list(&qualified_rule, ak.fly_string_from_str("style"), ak.Function1[const Declaration*, unit](call = record_declaration, context = &style))
+    assert(ak.string_view_text(ak.string_builder_string_view(&style.declarations)) == "color;width;")
+    assert(reports_text() == "style>qualified-rule;")
+
+    # Without a reporter installed, nothing is reported (and nothing traps).
+    invalid_rule_location_reporter = none
+    reset_reports()
+    at_rule_for_each_as_rule_list(&rule, ak.Function1[const Rule*, unit](call = record_rule, context = &rules))
+    assert(reports_text() == "")
+
+test "AtRule and QualifiedRule rule-list walkers and their reports":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_at_rule_walkers()
+
+# mark: Blocks, functions, substitution presence ================================================
+
+noinline func test_blocks_and_functions():
+    var values = ak.Vector[ComponentValue]()
+    ak.vector_append_t(&values, component_value_from_token(token_create_ident(ak.fly_string_from_str("a"), ak.string_from_str("a"))))
+    ak.vector_append_t(&values, component_value_from_token(token_create_whitespace(ak.string_from_str("\n"))))
+    ak.vector_append_t(&values, component_value_from_token(token_create_string(ak.fly_string_from_str("q"), ak.string_from_str("'q'"))))
+    let paren = SimpleBlock(token = token_create(TokenType.open_paren, ak.string_from_str("(")), value = values, end_token = token_create(TokenType.close_paren, ak.string_from_str(")")))
+    assert(simple_block_is_paren(&paren) and not simple_block_is_curly(&paren) and not simple_block_is_square(&paren))
+    let paren_string = simple_block_to_string(&paren)
+    assert(ak.string_view_text(ak.string_bytes_as_string_view(&paren_string)) == "(a \"q\")")
+    let paren_source = simple_block_original_source_text(&paren)
+    assert(ak.string_view_text(ak.string_bytes_as_string_view(&paren_source)) == "(a\n'q')")
+    # An unterminated block has the default (empty) end token.
+    let open = SimpleBlock(token = token_create(TokenType.open_curly, ak.string_from_str("{")), value = values, end_token = token_new())
+    let open_source = simple_block_original_source_text(&open)
+    assert(ak.string_view_text(ak.string_bytes_as_string_view(&open_source)) == "{a\n'q'")
+    let open_string = simple_block_to_string(&open)
+    assert(ak.string_view_text(ak.string_bytes_as_string_view(&open_string)) == "{a \"q\"}")
+    # SimpleBlock::operator== compares the opening token and the values, not the end token.
+    let same_values = SimpleBlock(token = token_create(TokenType.open_paren, ak.string_new()), value = values, end_token = token_new())
+    assert(simple_block_eq(&paren, same_values))
+    assert(not simple_block_eq(&paren, open))
+
+    # Function names are serialized as identifiers.
+    let function = Function(name = ak.fly_string_from_str("1x"), value = values, name_token = token_create_function(ak.fly_string_from_str("1x"), ak.string_from_str("\\31 x(")), end_token = token_new())
+    let function_string = function_to_string(&function)
+    assert(ak.string_view_text(ak.string_bytes_as_string_view(&function_string)) == "\\31 x(a \"q\")")
+    let function_source = function_original_source_text(&function)
+    assert(ak.string_view_text(ak.string_bytes_as_string_view(&function_source)) == "\\31 x(a\n'q'")
+    let renamed = Function(name = ak.fly_string_from_str("y"), value = values, name_token = token_new(), end_token = token_new())
+    assert(function_eq(&function, Function(name = ak.fly_string_from_str("1x"), value = values, name_token = token_new(), end_token = token_new())))
+    assert(not function_eq(&function, renamed))
+
+    let invalid = GuaranteedInvalidValue()
+    let invalid_string = guaranteed_invalid_value_to_string(&invalid)
+    let invalid_source = guaranteed_invalid_value_original_source_text(&invalid)
+    assert(ak.string_is_empty(&invalid_string) and ak.string_is_empty(&invalid_source))
+
+    var presence = SubstitutionFunctionsPresence()
+    assert(not substitution_functions_presence_has_any(&presence))
+    presence.inherit = true
+    assert(substitution_functions_presence_has_any(&presence))
+
+test "SimpleBlock and Function strings, equality, substitution presence":
+    # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
+    # test allocates from the process heap.
+    with memory.heap:
+        test_blocks_and_functions()

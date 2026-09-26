@@ -1,0 +1,153 @@
+#==============================================================================================
+#
+#   serialize - identifier, string, URL and number serialization (the CSS/Serialize split)
+#
+#   DESCRIPTION:
+#       Port of the half of LibWeb/CSS/Serialize.cpp that tokens use (lines 18-128 and
+#       134-180: escape_a_character, escape_a_character_as_code_point, serialize_an_identifier,
+#       serialize_a_string, serialize_a_url, serialize_a_number and their String forms), moved
+#       into css_syntax by DESIGN.md §4.1.3 ("CSS/Serialize: file split by function"). The rest
+#       of Serialize.cpp (unicode ranges, declarations, colors, StyleValue lists) stays in the
+#       engine. The C++ overloads are named by their first parameter: `_string_builder` appends
+#       to a builder, `_string_view` / `_f64` answers a String.
+#
+#==============================================================================================
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:19 Web::CSS::escape_a_character.
+# https://www.w3.org/TR/cssom-1/#escape-a-character
+pub func escape_a_character(builder: ak.StringBuilder*, character: u32):
+    ak.string_builder_append_u8(builder, '\\')
+    ak.string_builder_append_code_point(builder, character)
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:26 Web::CSS::escape_a_character_as_code_point.
+# https://www.w3.org/TR/cssom-1/#escape-a-character-as-code-point
+pub func escape_a_character_as_code_point(builder: ak.StringBuilder*, character: u32):
+    string_builder_appendff(builder, "\\{:x} ", [ak.arg_u64(character)])
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:32 Web::CSS::serialize_an_identifier.
+# https://www.w3.org/TR/cssom-1/#serialize-an-identifier
+pub func serialize_an_identifier_string_builder(builder: ak.StringBuilder*, ident: ak.StringView):
+    var characters = ak.Utf8View()
+    ak.utf8_view_construct_string_view(&characters, ident)
+    let begin = ak.utf8_view_begin(&characters)
+    let first_character: u32 = 0 if ak.utf8_view_is_empty(&characters) else ak.utf8_code_point_iterator_deref(&begin)
+
+    # To serialize an identifier means to create a string represented by the concatenation of,
+    # for each character of the identifier:
+    var it = ak.utf8_view_begin(&characters)
+    let end = ak.utf8_view_end(&characters)
+    while not ak.utf8_code_point_iterator_eq(&it, &end):
+        let character = ak.utf8_code_point_iterator_deref(&it)
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        # If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
+        if character == 0:
+            ak.string_builder_append_code_point(builder, 0xfffd)
+            continue
+        # If the character is in the range [\1-\1f] (U+0001 to U+001F) or is U+007F,
+        # then the character escaped as code point.
+        if (character >= 0x0001 and character <= 0x001f) or (character == 0x007f):
+            escape_a_character_as_code_point(builder, character)
+            continue
+        # If the character is the first character and is in the range [0-9] (U+0030 to U+0039),
+        # then the character escaped as code point.
+        if ak.string_builder_is_empty(builder) and character >= (u32)'0' and character <= (u32)'9':
+            escape_a_character_as_code_point(builder, character)
+            continue
+        # If the character is the second character and is in the range [0-9] (U+0030 to U+0039)
+        # and the first character is a "-" (U+002D), then the character escaped as code point.
+        if ak.string_builder_length(builder) == 1 and first_character == (u32)'-' and character >= (u32)'0' and character <= (u32)'9':
+            escape_a_character_as_code_point(builder, character)
+            continue
+        # If the character is the first character and is a "-" (U+002D), and there is no second
+        # character, then the escaped character.
+        if ak.string_builder_is_empty(builder) and character == (u32)'-' and ak.utf8_view_length(&characters) == 1:
+            escape_a_character(builder, character)
+            continue
+        # If the character is not handled by one of the above rules and is greater than or equal to U+0080, is "-" (U+002D) or "_" (U+005F), or is in one of the ranges [0-9] (U+0030 to U+0039), [A-Z] (U+0041 to U+005A), or \[a-z] (U+0061 to U+007A), then the character itself.
+        if (character >= 0x0080) or (character == (u32)'-') or (character == (u32)'_') or (character >= (u32)'0' and character <= (u32)'9') or (character >= (u32)'A' and character <= (u32)'Z') or (character >= (u32)'a' and character <= (u32)'z'):
+            ak.string_builder_append_code_point(builder, character)
+            continue
+        # Otherwise, the escaped character.
+        escape_a_character(builder, character)
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:84 Web::CSS::serialize_a_string.
+# https://www.w3.org/TR/cssom-1/#serialize-a-string
+pub func serialize_a_string_string_builder(builder: ak.StringBuilder*, string: ak.StringView):
+    var characters = ak.Utf8View()
+    ak.utf8_view_construct_string_view(&characters, string)
+
+    # To serialize a string means to create a string represented by '"' (U+0022), followed by the result
+    # of applying the rules below to each character of the given string, followed by '"' (U+0022):
+    ak.string_builder_append_u8(builder, '"')
+
+    var it = ak.utf8_view_begin(&characters)
+    let end = ak.utf8_view_end(&characters)
+    while not ak.utf8_code_point_iterator_eq(&it, &end):
+        let character = ak.utf8_code_point_iterator_deref(&it)
+        discard(ak.utf8_code_point_iterator_inc(&it))
+        # If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
+        if character == 0:
+            ak.string_builder_append_code_point(builder, 0xfffd)
+            continue
+        # If the character is in the range [\1-\1f] (U+0001 to U+001F) or is U+007F, the character escaped as code point.
+        if (character >= 0x0001 and character <= 0x001f) or (character == 0x007f):
+            escape_a_character_as_code_point(builder, character)
+            continue
+        # If the character is '"' (U+0022) or "\" (U+005C), the escaped character.
+        if character == 0x0022 or character == 0x005c:
+            escape_a_character(builder, character)
+            continue
+        # Otherwise, the character itself.
+        ak.string_builder_append_code_point(builder, character)
+
+    ak.string_builder_append_u8(builder, '"')
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:116 Web::CSS::serialize_a_url.
+# https://www.w3.org/TR/cssom-1/#serialize-a-url
+pub func serialize_a_url_string_builder(builder: ak.StringBuilder*, url: ak.StringView):
+    # To serialize a URL means to create a string represented by "url(",
+    # followed by the serialization of the URL as a string, followed by ")".
+    ak.string_builder_append_string_view(builder, ak.sv("url("))
+    serialize_a_string_string_builder(builder, url)
+    ak.string_builder_append_u8(builder, ')')
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:134 Web::CSS::serialize_a_number.
+# https://drafts.csswg.org/cssom/#serialize-a-css-value
+pub func serialize_a_number_string_builder(builder: ak.StringBuilder*, value: f64):
+    # -> <number>
+    #    A base-ten number using digits 0-9 (U+0030 to U+0039) in the shortest form possible, using "." to separate
+    #    decimals (if any), rounding the value if necessary to not produce more than 6 decimals, preceded by "-"
+    #    (U+002D) if it is negative.
+    # NOTE: scientific notation is not used.
+
+    # AD-HOC: If the number is small enough that it would not print any digits when rounded, serialize it as 0.
+    if math.abs(value) < 0.0000005:
+        ak.string_builder_append_string_view(builder, ak.sv("0"))
+        return
+
+    # FIXME: Prevent scientific notation for large values.
+    string_builder_appendff(builder, "{:.6}", [ak.arg_f64(value)])
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:152 Web::CSS::serialize_an_identifier.
+pub func serialize_an_identifier_string_view(ident: ak.StringView) -> ak.String:
+    var builder = ak.string_builder_new()
+    serialize_an_identifier_string_builder(&builder, ident)
+    return ak.string_builder_to_string_without_validation(&builder)
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:159 Web::CSS::serialize_a_string.
+pub func serialize_a_string_string_view(string: ak.StringView) -> ak.String:
+    var builder = ak.string_builder_new()
+    serialize_a_string_string_builder(&builder, string)
+    return ak.string_builder_to_string_without_validation(&builder)
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:166 Web::CSS::serialize_a_url.
+pub func serialize_a_url_string_view(url: ak.StringView) -> ak.String:
+    var builder = ak.string_builder_new()
+    serialize_a_url_string_builder(&builder, url)
+    return ak.string_builder_to_string_without_validation(&builder)
+
+## Ported from Libraries/LibWeb/CSS/Serialize.cpp:173 Web::CSS::serialize_a_number.
+pub func serialize_a_number_f64(value: f64) -> ak.String:
+    var builder = ak.string_builder_new()
+    serialize_a_number_string_builder(&builder, value)
+    return ak.string_builder_to_string_without_validation(&builder)

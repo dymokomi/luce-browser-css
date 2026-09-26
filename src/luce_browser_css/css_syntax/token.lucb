@@ -1,0 +1,496 @@
+#==============================================================================================
+#
+#   token - CSS::Parser::Token: the tokens of CSS Syntax Level 3
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Parser/Token.h (lines 1-216) and LibWeb/CSS/Parser/Token.cpp (lines
+#       1-427), in the header's order with the .cpp bodies in place of their declarations.
+#       The Formatter<Token> specialization is token_to_string. `create*`'s C++ default
+#       `String original_source_text = {}` is written by the caller as `ak.string_new()`.
+#
+#==============================================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:17 Web::CSS::Parser::clamp_to_single_precision.
+func clamp_to_single_precision(value: f64) -> f64:
+    if value > (f64)ak.f32_max:
+        return (f64)ak.f32_max
+
+    if value < (f64)ak.f32_lowest:
+        return (f64)ak.f32_lowest
+
+    return value
+
+# mark: Creation ================================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:14 Web::CSS::Parser::Token::create.
+## Use this only to create types that don't have their own create_foo() methods below.
+pub func token_create(type_: TokenType, original_source_text: ak.String) -> Token:
+    assert(type_ == TokenType.invalid or type_ == TokenType.end_of_file or type_ == TokenType.bad_string or type_ == TokenType.bad_url or type_ == TokenType.cdo or type_ == TokenType.cdc or type_ == TokenType.colon or type_ == TokenType.semicolon or type_ == TokenType.comma or type_ == TokenType.open_square or type_ == TokenType.close_square or type_ == TokenType.open_paren or type_ == TokenType.close_paren or type_ == TokenType.open_curly or type_ == TokenType.close_curly)
+
+    var token = token_new()
+    token.m_type = type_
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:39 Web::CSS::Parser::Token::create_ident.
+pub func token_create_ident(ident: ak.FlyString, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.ident
+    token.m_value = ident
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:48 Web::CSS::Parser::Token::create_function.
+pub func token_create_function(name: ak.FlyString, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.function
+    token.m_value = name
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:57 Web::CSS::Parser::Token::create_at_keyword.
+pub func token_create_at_keyword(name: ak.FlyString, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.at_keyword
+    token.m_value = name
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:66 Web::CSS::Parser::Token::create_hash.
+pub func token_create_hash(value: ak.FlyString, hash_type: TokenHashType, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.hash_
+    token.m_value = value
+    token.m_hash_type = hash_type
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:76 Web::CSS::Parser::Token::create_string.
+pub func token_create_string(value: ak.FlyString, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.string
+    token.m_value = value
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:85 Web::CSS::Parser::Token::create_url.
+pub func token_create_url(url: ak.FlyString, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.url
+    token.m_value = url
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:94 Web::CSS::Parser::Token::create_delim.
+pub func token_create_delim(delim: u32, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.delim
+    token.m_value = ak.fly_string_from_string(ak.string_from_code_point(delim))
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:103 Web::CSS::Parser::Token::create_number.
+pub func token_create_number(value: Number, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.number
+    token.m_number_value = value
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:112 Web::CSS::Parser::Token::create_percentage.
+pub func token_create_percentage(value: Number, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.percentage
+    token.m_number_value = value
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:121 Web::CSS::Parser::Token::create_dimension.
+pub func token_create_dimension_number(value: Number, unit_: ak.FlyString, original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.dimension
+    token.m_number_value = value
+    token.m_value = unit_
+    token.m_original_source_text = original_source_text
+    return token
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:82 Web::CSS::Parser::Token::create_dimension.
+pub func token_create_dimension_f64(value: f64, unit_: ak.FlyString, original_source_text: ak.String) -> Token:
+    return token_create_dimension_number(number_create(NumberType.number, value), unit_, original_source_text)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:131 Web::CSS::Parser::Token::create_whitespace.
+pub func token_create_whitespace(original_source_text: ak.String) -> Token:
+    var token = token_new()
+    token.m_type = TokenType.whitespace
+    token.m_original_source_text = original_source_text
+    return token
+
+# mark: Accessors ===============================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:88 Web::CSS::Parser::Token::type.
+pub func token_type(this: const Token*) -> TokenType:
+    return this.m_type
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:89 Web::CSS::Parser::Token::is.
+pub func token_is(this: const Token*, type_: TokenType) -> bool:
+    return this.m_type == type_
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:91 Web::CSS::Parser::Token::ident.
+pub func token_ident(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.ident)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:97 Web::CSS::Parser::Token::function.
+pub func token_function(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.function)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:103 Web::CSS::Parser::Token::delim.
+pub func token_delim(this: const Token*) -> u32:
+    assert(this.m_type == TokenType.delim)
+    let code_points = ak.fly_string_code_points(&this.m_value)
+    let begin = ak.utf8_view_begin(&code_points)
+    return ak.utf8_code_point_iterator_deref(&begin)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:109 Web::CSS::Parser::Token::string.
+pub func token_string(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.string)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:115 Web::CSS::Parser::Token::url.
+pub func token_url(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.url)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:121 Web::CSS::Parser::Token::at_keyword.
+pub func token_at_keyword(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.at_keyword)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:127 Web::CSS::Parser::Token::hash_type.
+pub func token_hash_type(this: const Token*) -> TokenHashType:
+    assert(this.m_type == TokenType.hash_)
+    return this.m_hash_type
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:132 Web::CSS::Parser::Token::hash_value.
+pub func token_hash_value(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.hash_)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:138 Web::CSS::Parser::Token::is_integer.
+pub func token_is_integer(this: const Token*) -> bool:
+    assert(this.m_type == TokenType.number or this.m_type == TokenType.dimension or this.m_type == TokenType.percentage)
+    return number_is_integer(&this.m_number_value)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:144 Web::CSS::Parser::Token::is_integer_with_explicit_sign.
+pub func token_is_integer_with_explicit_sign(this: const Token*) -> bool:
+    assert(this.m_type == TokenType.number or this.m_type == TokenType.dimension or this.m_type == TokenType.percentage)
+    return number_is_integer_with_explicit_sign(&this.m_number_value)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:150 Web::CSS::Parser::Token::number_value.
+pub func token_number_value(this: const Token*) -> f64:
+    assert(this.m_type == TokenType.number)
+    return clamp_to_single_precision(number_value(&this.m_number_value))
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:155 Web::CSS::Parser::Token::to_integer.
+pub func token_to_integer(this: const Token*) -> i32:
+    assert(this.m_type == TokenType.number and number_is_integer(&this.m_number_value))
+    return number_integer_value(&this.m_number_value)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:161 Web::CSS::Parser::Token::dimension_unit.
+pub func token_dimension_unit(this: const Token*) -> ak.FlyString:
+    assert(this.m_type == TokenType.dimension)
+    return this.m_value
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:166 Web::CSS::Parser::Token::dimension_value.
+pub func token_dimension_value(this: const Token*) -> f64:
+    assert(this.m_type == TokenType.dimension)
+    return clamp_to_single_precision(number_value(&this.m_number_value))
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:171 Web::CSS::Parser::Token::dimension_value_int.
+pub func token_dimension_value_int(this: const Token*) -> i32:
+    return number_integer_value(&this.m_number_value)
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:173 Web::CSS::Parser::Token::percentage.
+pub func token_percentage(this: const Token*) -> f64:
+    assert(this.m_type == TokenType.percentage)
+    return clamp_to_single_precision(number_value(&this.m_number_value))
+
+# mark: Brackets ================================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:346 Web::CSS::Parser::Token::mirror_variant.
+pub func token_mirror_variant(this: const Token*) -> TokenType:
+    if token_is(this, TokenType.open_curly):
+        return TokenType.close_curly
+
+    if token_is(this, TokenType.open_square):
+        return TokenType.close_square
+
+    if token_is(this, TokenType.open_paren):
+        return TokenType.close_paren
+
+    return TokenType.invalid
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:363 Web::CSS::Parser::Token::bracket_string.
+pub func token_bracket_string(this: const Token*) -> ak.StringView:
+    if token_is(this, TokenType.open_curly):
+        return ak.sv("{")
+
+    if token_is(this, TokenType.close_curly):
+        return ak.sv("}")
+
+    if token_is(this, TokenType.open_square):
+        return ak.sv("[")
+
+    if token_is(this, TokenType.close_square):
+        return ak.sv("]")
+
+    if token_is(this, TokenType.open_paren):
+        return ak.sv("(")
+
+    if token_is(this, TokenType.close_paren):
+        return ak.sv(")")
+
+    return ak.sv("")
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:392 Web::CSS::Parser::Token::bracket_mirror_string.
+pub func token_bracket_mirror_string(this: const Token*) -> ak.StringView:
+    if token_is(this, TokenType.open_curly):
+        return ak.sv("}")
+
+    if token_is(this, TokenType.close_curly):
+        return ak.sv("{")
+
+    if token_is(this, TokenType.open_square):
+        return ak.sv("]")
+
+    if token_is(this, TokenType.close_square):
+        return ak.sv("[")
+
+    if token_is(this, TokenType.open_paren):
+        return ak.sv(")")
+
+    if token_is(this, TokenType.close_paren):
+        return ak.sv("(")
+
+    return ak.sv("")
+
+# mark: Serialization ===========================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:139 Web::CSS::Parser::Token::to_string.
+pub func token_to_string(this: const Token*) -> ak.String:
+    match this.m_type:
+        .end_of_file:
+            return ak.string_new()
+        .ident:
+            let ident = token_ident(this)
+            return serialize_an_identifier_string_view(ak.fly_string_bytes_as_string_view(&ident))
+        .function:
+            let function = token_function(this)
+            let serialized = serialize_an_identifier_string_view(ak.fly_string_bytes_as_string_view(&function))
+            return string_formatted("{}(", [ak.arg_string_view(ak.string_bytes_as_string_view(&serialized))])
+        .at_keyword:
+            let at_keyword = token_at_keyword(this)
+            let serialized = serialize_an_identifier_string_view(ak.fly_string_bytes_as_string_view(&at_keyword))
+            return string_formatted("@{}", [ak.arg_string_view(ak.string_bytes_as_string_view(&serialized))])
+        .hash_:
+            let hash_value = token_hash_value(this)
+            match this.m_hash_type:
+                .id:
+                    let serialized = serialize_an_identifier_string_view(ak.fly_string_bytes_as_string_view(&hash_value))
+                    return string_formatted("#{}", [ak.arg_string_view(ak.string_bytes_as_string_view(&serialized))])
+                .unrestricted:
+                    return string_formatted("#{}", [ak.arg_string_view(ak.fly_string_bytes_as_string_view(&hash_value))])
+                _:
+                    trap("VERIFY_NOT_REACHED")
+        .string:
+            let string = token_string(this)
+            return serialize_a_string_string_view(ak.fly_string_bytes_as_string_view(&string))
+        .bad_string:
+            return ak.string_new()
+        .url:
+            let url = token_url(this)
+            return serialize_a_url_string_view(ak.fly_string_bytes_as_string_view(&url))
+        .bad_url:
+            return ak.string_from_str("url()")
+        .delim:
+            return ak.fly_string_to_string_const(&this.m_value)
+        .number:
+            return ak.string_number_f64(number_value(&this.m_number_value))
+        .percentage:
+            return string_formatted("{}%", [ak.arg_f64(number_value(&this.m_number_value))])
+        .dimension:
+            let unit_ = token_dimension_unit(this)
+            return string_formatted("{}{}", [ak.arg_f64(number_value(&this.m_number_value)), ak.arg_string_view(ak.fly_string_bytes_as_string_view(&unit_))])
+        .whitespace:
+            return ak.string_from_str(" ")
+        .cdo:
+            return ak.string_from_str("<!--")
+        .cdc:
+            return ak.string_from_str("-->")
+        .colon:
+            return ak.string_from_str(":")
+        .semicolon:
+            return ak.string_from_str(";")
+        .comma:
+            return ak.string_from_str(",")
+        .open_square:
+            return ak.string_from_str("[")
+        .close_square:
+            return ak.string_from_str("]")
+        .open_paren:
+            return ak.string_from_str("(")
+        .close_paren:
+            return ak.string_from_str(")")
+        .open_curly:
+            return ak.string_from_str("{")
+        .close_curly:
+            return ak.string_from_str("}")
+        _:
+            # Type::Invalid and anything else.
+            trap("VERIFY_NOT_REACHED")
+
+## Token::to_debug_string's `append_quoted_string` lambda.
+func token_to_debug_string_append_quoted_string(builder: ak.StringBuilder*, string: ak.StringView):
+    ak.string_builder_append_u8(builder, '"')
+    ak.string_builder_append_escaped_for_json(builder, string)
+    ak.string_builder_append_u8(builder, '"')
+
+## Token::to_debug_string's `hash_type_name` lambda.
+func token_to_debug_string_hash_type_name(hash_type: TokenHashType) -> ak.StringView:
+    match hash_type:
+        .id:
+            return ak.sv("Id")
+        .unrestricted:
+            return ak.sv("Unrestricted")
+        _:
+            trap("VERIFY_NOT_REACHED")
+
+## Token::to_debug_string's `number_type_name` lambda.
+func token_to_debug_string_number_type_name(type_: NumberType) -> ak.StringView:
+    match type_:
+        .number:
+            return ak.sv("Number")
+        .integer_with_explicit_sign:
+            return ak.sv("IntegerWithExplicitSign")
+        .integer:
+            return ak.sv("Integer")
+        _:
+            trap("VERIFY_NOT_REACHED")
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:207 Web::CSS::Parser::Token::to_debug_string.
+pub func token_to_debug_string(this: const Token*) -> ak.String:
+    var builder = ak.string_builder_new()
+    var has_type_specific_fields = false
+    match this.m_type:
+        .invalid:
+            trap("VERIFY_NOT_REACHED")
+
+        .end_of_file:
+            ak.string_builder_append_string_view(&builder, ak.sv("__EOF__("))
+        .ident:
+            ak.string_builder_append_string_view(&builder, ak.sv("Ident(value="))
+            let ident = token_ident(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&ident))
+            has_type_specific_fields = true
+        .function:
+            ak.string_builder_append_string_view(&builder, ak.sv("Function(value="))
+            let function = token_function(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&function))
+            has_type_specific_fields = true
+        .at_keyword:
+            ak.string_builder_append_string_view(&builder, ak.sv("AtKeyword(value="))
+            let at_keyword = token_at_keyword(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&at_keyword))
+            has_type_specific_fields = true
+        .hash_:
+            ak.string_builder_append_string_view(&builder, ak.sv("Hash(value="))
+            let hash_value = token_hash_value(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&hash_value))
+            string_builder_appendff(&builder, ", hash_type={}", [ak.arg_string_view(token_to_debug_string_hash_type_name(this.m_hash_type))])
+            has_type_specific_fields = true
+        .string:
+            ak.string_builder_append_string_view(&builder, ak.sv("String(value="))
+            let string = token_string(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&string))
+            has_type_specific_fields = true
+        .bad_string:
+            ak.string_builder_append_string_view(&builder, ak.sv("BadString("))
+        .url:
+            ak.string_builder_append_string_view(&builder, ak.sv("Url(value="))
+            let url = token_url(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&url))
+            has_type_specific_fields = true
+        .bad_url:
+            ak.string_builder_append_string_view(&builder, ak.sv("BadUrl("))
+        .delim:
+            ak.string_builder_append_string_view(&builder, ak.sv("Delim(value="))
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&this.m_value))
+            string_builder_appendff(&builder, ", code_point=U+{:04X}", [ak.arg_u64((u64)token_delim(this))])
+            has_type_specific_fields = true
+        .number:
+            string_builder_appendff(&builder, "Number(value={}, number_type={}", [ak.arg_f64(token_number_value(this)), ak.arg_string_view(token_to_debug_string_number_type_name(number_type(&this.m_number_value)))])
+            has_type_specific_fields = true
+        .percentage:
+            string_builder_appendff(&builder, "Percentage(value={}, number_type={}", [ak.arg_f64(token_percentage(this)), ak.arg_string_view(token_to_debug_string_number_type_name(number_type(&this.m_number_value)))])
+            has_type_specific_fields = true
+        .dimension:
+            string_builder_appendff(&builder, "Dimension(value={}, number_type={}, unit=", [ak.arg_f64(token_dimension_value(this)), ak.arg_string_view(token_to_debug_string_number_type_name(number_type(&this.m_number_value)))])
+            let dimension_unit = token_dimension_unit(this)
+            token_to_debug_string_append_quoted_string(&builder, ak.fly_string_bytes_as_string_view(&dimension_unit))
+            has_type_specific_fields = true
+        .whitespace:
+            ak.string_builder_append_string_view(&builder, ak.sv("Whitespace("))
+        .cdo:
+            ak.string_builder_append_string_view(&builder, ak.sv("CDO("))
+        .cdc:
+            ak.string_builder_append_string_view(&builder, ak.sv("CDC("))
+        .colon:
+            ak.string_builder_append_string_view(&builder, ak.sv("Colon("))
+        .semicolon:
+            ak.string_builder_append_string_view(&builder, ak.sv("Semicolon("))
+        .comma:
+            ak.string_builder_append_string_view(&builder, ak.sv("Comma("))
+        .open_square:
+            ak.string_builder_append_string_view(&builder, ak.sv("OpenSquare("))
+        .close_square:
+            ak.string_builder_append_string_view(&builder, ak.sv("CloseSquare("))
+        .open_paren:
+            ak.string_builder_append_string_view(&builder, ak.sv("OpenParen("))
+        .close_paren:
+            ak.string_builder_append_string_view(&builder, ak.sv("CloseParen("))
+        .open_curly:
+            ak.string_builder_append_string_view(&builder, ak.sv("OpenCurly("))
+        .close_curly:
+            ak.string_builder_append_string_view(&builder, ak.sv("CloseCurly("))
+        _:
+            # Not a Token::Type (the C++ switch has no default).
+            trap("VERIFY_NOT_REACHED")
+
+    ak.string_builder_append_string_view(&builder, ak.sv(", source=") if has_type_specific_fields else ak.sv("source="))
+    token_to_debug_string_append_quoted_string(&builder, ak.string_bytes_as_string_view(&this.m_original_source_text))
+    string_builder_appendff(&builder, ", start={}:{}, end={}:{})", [ak.arg_u64((u64)this.m_start_position.line), ak.arg_u64((u64)this.m_start_position.column), ak.arg_u64((u64)this.m_end_position.line), ak.arg_u64((u64)this.m_end_position.column)])
+    return ak.string_builder_to_string_without_validation(&builder)
+
+# mark: Source positions and equality ===========================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:186 Web::CSS::Parser::Token::original_source_text.
+pub func token_original_source_text(this: const Token*) -> ak.String:
+    return this.m_original_source_text
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:187 Web::CSS::Parser::Token::start_position.
+pub func token_start_position(this: const Token*) -> TokenPosition:
+    return this.m_start_position
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:188 Web::CSS::Parser::Token::end_position.
+pub func token_end_position(this: const Token*) -> TokenPosition:
+    return this.m_end_position
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.cpp:421 Web::CSS::Parser::Token::set_position_range.
+pub func token_set_position_range(this: Token*, start: TokenPosition, end: TokenPosition):
+    this.m_start_position = start
+    this.m_end_position = end
+
+## Ported from Libraries/LibWeb/CSS/Parser/Token.h:191 Web::CSS::Parser::Token::operator==.
+pub func token_eq(this: const Token*, other: Token) -> bool:
+    return this.m_type == other.m_type and ak.fly_string_eq_fly_string(&this.m_value, &other.m_value) and number_eq(&this.m_number_value, other.m_number_value) and this.m_hash_type == other.m_hash_type

@@ -1,0 +1,256 @@
+#==============================================================================================
+#
+#   component_value - CSS::Parser::ComponentValue: a token, function, block or invalid value
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/Parser/ComponentValue.h (lines 1-69) and
+#       LibWeb/CSS/Parser/ComponentValue.cpp (lines 1-133), in the header's order with the
+#       .cpp bodies in place of their declarations. `m_value.get<T>()` is a `match` that traps
+#       on another alternative, as Variant::get VERIFYs. The Formatter<ComponentValue>
+#       specialization is component_value_to_string.
+#
+#==============================================================================================
+
+# mark: Construction ============================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:12 Web::CSS::Parser::ComponentValue::ComponentValue.
+pub func component_value_construct_token(this: ComponentValue*, token: Token):
+    this.m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.token(token)
+    this.m_attr_tainted = false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:16 Web::CSS::Parser::ComponentValue::ComponentValue.
+pub func component_value_construct_function(this: ComponentValue*, function: Function):
+    this.m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.function(function)
+    this.m_attr_tainted = false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:20 Web::CSS::Parser::ComponentValue::ComponentValue.
+pub func component_value_construct_simple_block(this: ComponentValue*, block: SimpleBlock):
+    this.m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.simple_block(block)
+    this.m_attr_tainted = false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:24 Web::CSS::Parser::ComponentValue::ComponentValue.
+pub func component_value_construct_guaranteed_invalid_value(this: ComponentValue*, invalid: GuaranteedInvalidValue):
+    this.m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.guaranteed_invalid_value(invalid)
+    this.m_attr_tainted = false
+
+## `ComponentValue { token }`: the value form of component_value_construct_token (C++ also
+## converts a Token to a ComponentValue implicitly).
+pub func component_value_from_token(token: Token) -> ComponentValue:
+    return ComponentValue(m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.token(token), m_attr_tainted = false)
+
+## `ComponentValue { move(function) }`: the value form of component_value_construct_function.
+pub func component_value_from_function(function: Function) -> ComponentValue:
+    return ComponentValue(m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.function(function), m_attr_tainted = false)
+
+## `ComponentValue { move(block) }`: the value form of component_value_construct_simple_block.
+pub func component_value_from_simple_block(block: SimpleBlock) -> ComponentValue:
+    return ComponentValue(m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.simple_block(block), m_attr_tainted = false)
+
+## `ComponentValue { GuaranteedInvalidValue {} }`: the value form of
+## component_value_construct_guaranteed_invalid_value.
+pub func component_value_from_guaranteed_invalid_value(invalid: GuaranteedInvalidValue) -> ComponentValue:
+    return ComponentValue(m_value = TokenOrFunctionOrSimpleBlockOrGuaranteedInvalidValue.guaranteed_invalid_value(invalid), m_attr_tainted = false)
+
+# mark: Alternatives ============================================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:31 Web::CSS::Parser::ComponentValue::is_block.
+pub func component_value_is_block(this: const ComponentValue*) -> bool:
+    match this.m_value:
+        .simple_block(_): return true
+        _: return false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:32 Web::CSS::Parser::ComponentValue::block.
+pub func component_value_block(this: const ComponentValue*) -> SimpleBlock:
+    match this.m_value:
+        .simple_block(block): return block
+        _: trap("VERIFY: ComponentValue::block() on another alternative")
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:34 Web::CSS::Parser::ComponentValue::is_function.
+pub func component_value_is_function(this: const ComponentValue*) -> bool:
+    match this.m_value:
+        .function(_): return true
+        _: return false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:31 Web::CSS::Parser::ComponentValue::is_function.
+pub func component_value_is_function_string_view(this: const ComponentValue*, name: ak.StringView) -> bool:
+    if not component_value_is_function(this):
+        return false
+    let function = component_value_function(this)
+    return ak.fly_string_equals_ignoring_ascii_case_string_view(&function.name, name)
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:36 Web::CSS::Parser::ComponentValue::function.
+pub func component_value_function(this: const ComponentValue*) -> Function:
+    match this.m_value:
+        .function(function): return function
+        _: trap("VERIFY: ComponentValue::function() on another alternative")
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:38 Web::CSS::Parser::ComponentValue::is_token.
+pub func component_value_is_token(this: const ComponentValue*) -> bool:
+    match this.m_value:
+        .token(_): return true
+        _: return false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:39 Web::CSS::Parser::ComponentValue::is.
+pub func component_value_is(this: const ComponentValue*, type_: TokenType) -> bool:
+    if not component_value_is_token(this):
+        return false
+    let token = component_value_token(this)
+    return token_is(&token, type_)
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:36 Web::CSS::Parser::ComponentValue::is_delim.
+pub func component_value_is_delim(this: const ComponentValue*, delim: u32) -> bool:
+    match delim:
+        # All of these have their own separate token types, and so passing them to is_delim() is incorrect and will never match.
+        0x3a, 0x3b, 0x2c, 0x5b, 0x5d, 0x7b, 0x7d, 0x28, 0x29:  # ':' ';' ',' '[' ']' '{' '}' '(' ')'
+            ak.dbgln(f"Calling is_delim() with a punctuation mark ({(char)delim}) that has its own token type!")
+            trap("VERIFY_NOT_REACHED")
+        _:
+            if not component_value_is(this, TokenType.delim):
+                return false
+            let token = component_value_token(this)
+            return token_delim(&token) == delim
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:56 Web::CSS::Parser::ComponentValue::is_ident.
+pub func component_value_is_ident(this: const ComponentValue*, ident: ak.StringView) -> bool:
+    if not component_value_is(this, TokenType.ident):
+        return false
+    let token = component_value_token(this)
+    let token_ident_value = token_ident(&token)
+    return ak.fly_string_equals_ignoring_ascii_case_string_view(&token_ident_value, ident)
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:42 Web::CSS::Parser::ComponentValue::token.
+pub func component_value_token(this: const ComponentValue*) -> Token:
+    match this.m_value:
+        .token(token): return token
+        _: trap("VERIFY: ComponentValue::token() on another alternative")
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:43 Web::CSS::Parser::ComponentValue::operator Token.
+pub func component_value_to_token(this: const ComponentValue*) -> Token:
+    match this.m_value:
+        .token(token): return token
+        _: trap("VERIFY: ComponentValue::operator Token() on another alternative")
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:45 Web::CSS::Parser::ComponentValue::is_guaranteed_invalid.
+pub func component_value_is_guaranteed_invalid(this: const ComponentValue*) -> bool:
+    match this.m_value:
+        .guaranteed_invalid_value(_): return true
+        _: return false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:88 Web::CSS::Parser::ComponentValue::contains_guaranteed_invalid_value.
+pub func component_value_contains_guaranteed_invalid_value(this: const ComponentValue*) -> bool:
+    match this.m_value:
+        .token(_):
+            return false
+        .simple_block(block):
+            # block.value.first_matching(...).has_value()
+            let values = ak.vector_span_const(&block.value)
+            for it in &values:
+                if component_value_contains_guaranteed_invalid_value(it):
+                    return true
+            return false
+        .function(function):
+            # function.value.first_matching(...).has_value()
+            let values = ak.vector_span_const(&function.value)
+            for it in &values:
+                if component_value_contains_guaranteed_invalid_value(it):
+                    return true
+            return false
+        .guaranteed_invalid_value(_):
+            return true
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:109 Web::CSS::Parser::ComponentValue::contains_attr_tainted_value.
+pub func component_value_contains_attr_tainted_value(this: const ComponentValue*) -> bool:
+    if this.m_attr_tainted:
+        return true
+
+    match this.m_value:
+        .token(_):
+            return false
+        .simple_block(block):
+            # block.value.first_matching(...).has_value()
+            let values = ak.vector_span_const(&block.value)
+            for it in &values:
+                if component_value_contains_attr_tainted_value(it):
+                    return true
+            return false
+        .function(function):
+            # function.value.first_matching(...).has_value()
+            let values = ak.vector_span_const(&function.value)
+            for it in &values:
+                if component_value_contains_attr_tainted_value(it):
+                    return true
+            return false
+        .guaranteed_invalid_value(_):
+            return false
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:48 Web::CSS::Parser::ComponentValue::set_attr_tainted.
+pub func component_value_set_attr_tainted(this: ComponentValue*):
+    this.m_attr_tainted = true
+
+# mark: Serialization and equality ==============================================================
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:61 Web::CSS::Parser::ComponentValue::to_string.
+pub func component_value_to_string(this: const ComponentValue*) -> ak.String:
+    match this.m_value:
+        .token(token): return token_to_string(&token)
+        .function(function): return function_to_string(&function)
+        .simple_block(block): return simple_block_to_string(&block)
+        .guaranteed_invalid_value(invalid): return guaranteed_invalid_value_to_string(&invalid)
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:66 Web::CSS::Parser::ComponentValue::to_debug_string.
+pub func component_value_to_debug_string(this: const ComponentValue*) -> ak.String:
+    match this.m_value:
+        .token(token):
+            let debug_string = token_to_debug_string(&token)
+            return string_formatted("Token: {}", [ak.arg_string_view(ak.string_bytes_as_string_view(&debug_string))])
+        .simple_block(block):
+            let block_string = simple_block_to_string(&block)
+            return string_formatted("Block: {}", [ak.arg_string_view(ak.string_bytes_as_string_view(&block_string))])
+        .function(function):
+            let function_string = function_to_string(&function)
+            return string_formatted("Function: {}", [ak.arg_string_view(ak.string_bytes_as_string_view(&function_string))])
+        .guaranteed_invalid_value(_):
+            return ak.string_from_str("Guaranteed-invalid value")
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.cpp:83 Web::CSS::Parser::ComponentValue::original_source_text.
+pub func component_value_original_source_text(this: const ComponentValue*) -> ak.String:
+    match this.m_value:
+        .token(token): return token_original_source_text(&token)
+        .function(function): return function_original_source_text(&function)
+        .simple_block(block): return simple_block_original_source_text(&block)
+        .guaranteed_invalid_value(invalid): return guaranteed_invalid_value_original_source_text(&invalid)
+
+## Ported from Libraries/LibWeb/CSS/Parser/ComponentValue.h:54 Web::CSS::Parser::ComponentValue::operator==
+## (defaulted: the variants, then m_attr_tainted).
+pub func component_value_eq(this: const ComponentValue*, other: const ComponentValue*) -> bool:
+    var values_equal = false
+    match this.m_value:
+        .token(token):
+            match other.m_value:
+                .token(other_token): values_equal = token_eq(&token, other_token)
+                _: values_equal = false
+        .function(function):
+            match other.m_value:
+                .function(other_function): values_equal = function_eq(&function, other_function)
+                _: values_equal = false
+        .simple_block(block):
+            match other.m_value:
+                .simple_block(other_block): values_equal = simple_block_eq(&block, other_block)
+                _: values_equal = false
+        .guaranteed_invalid_value(_):
+            match other.m_value:
+                # GuaranteedInvalidValue's operator== is defaulted over no members.
+                .guaranteed_invalid_value(_): values_equal = true
+                _: values_equal = false
+    return values_equal and this.m_attr_tainted == other.m_attr_tainted
+
+## `Vector<ComponentValue>::operator==`: equal sizes and pairwise component_value_eq.
+pub func component_values_eq(a: const ak.Vector[ComponentValue]*, b: const ak.Vector[ComponentValue]*) -> bool:
+    let left = ak.vector_span_const(a)
+    let right = ak.vector_span_const(b)
+    if left.length != right.length:
+        return false
+    for index in 0..<left.length:
+        if not component_value_eq(&left[index], &right[index]):
+            return false
+    return true
