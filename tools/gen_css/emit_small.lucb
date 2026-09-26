@@ -1,0 +1,300 @@
+#==============================================================================================
+#
+#   emit_small - the environment variables, math functions, media features and transform functions
+#
+#   DESCRIPTION:
+#       Ports of Meta/Generators/generate_libweb_css_environment_variables.py,
+#       generate_libweb_css_math_functions.py (the enum and math_function_from_string; the parser
+#       half is the engine's), generate_libweb_css_media_feature_id.py and
+#       generate_libweb_css_transform_functions.py.
+#
+#==============================================================================================
+
+## Ported from generate_libweb_css_environment_variables.py verify_alphabetical (also
+## generate_libweb_css_property_id.py's): the members of `data` must be in code point order.
+func verify_alphabetical(data: const Json*, path: str):
+    var most_recent_name = ""
+    for index in 0..<data.count:
+        let name = data.key(index)
+        if string_less(name, most_recent_name):
+            trap(f"`{name}` is in the wrong position in `{path}`. Please keep this list alphabetical!")
+        most_recent_name = name
+
+# mark: EnvironmentVariable =====================================================================
+
+## Emit generated_environment_variable.lucb from EnvironmentVariables.json.
+func emit_environment_variable(environment_variables: const Json*) -> str!:
+    verify_alphabetical(environment_variables, "EnvironmentVariables.json")
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_environment_variable", "the CSS environment variables",
+        ["EnvironmentVariable.h", "EnvironmentVariable.cpp"], "generate_libweb_css_environment_variables.py",
+        "EnvironmentVariables.json", ["environment_variable_type(), which answers a ValueType, is the engine's."])
+    try out.blank()
+    var titles = try StrList.create()
+    for index in 0..<environment_variables.count:
+        try titles.append(try title_casify(environment_variables.key(index)))
+    try put_enum(&out, "Web::CSS::EnvironmentVariable", "EnvironmentVariable.h", "EnvironmentVariable",
+        underlying_type_for_enum(environment_variables.count), &titles)
+    try out.blank()
+
+    try put_ported(&out, "EnvironmentVariable.cpp", "Web::CSS::environment_variable_from_string")
+    try out.line("pub func environment_variable_from_string(string: ak.StringView) -> EnvironmentVariable?:")
+    for index in 0..<environment_variables.count:
+        let name = environment_variables.key(index)
+        try out.line(f"    if {try equals_ignoring_ascii_case("string", name)}:")
+        try out.line(f"        return {try enum_value("EnvironmentVariable", titles.at(index))}")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "EnvironmentVariable.cpp", "Web::CSS::to_string(EnvironmentVariable)")
+    try out.line("pub func to_string_environment_variable(environment_variable: EnvironmentVariable) -> ak.StringView:")
+    try out.line("    match environment_variable:")
+    for index in 0..<environment_variables.count:
+        try out.line(f"        .{try luce_case(titles.at(index))}: return {try string_view_literal(environment_variables.key(index))}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "EnvironmentVariable.cpp", "Web::CSS::environment_variable_dimension_count")
+    try out.line("pub func environment_variable_dimension_count(environment_variable: EnvironmentVariable) -> u32:")
+    try out.line("    match environment_variable:")
+    for index in 0..<environment_variables.count:
+        let dimensions = environment_variables.at(index).get("dimensions") else trap("an environment variable without dimensions")
+        try out.line(f"        .{try luce_case(titles.at(index))}: return {dimensions.text}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    return out.text()
+
+# mark: MathFunctions ===========================================================================
+
+## Emit generated_math_functions.lucb from MathFunctions.json.
+func emit_math_functions(functions_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_math_functions", "the CSS math functions",
+        ["MathFunctions.h", "MathFunctions.cpp"], "generate_libweb_css_math_functions.py", "MathFunctions.json",
+        ["Parser::parse_math_function() and parse_rounding_strategy() are the engine's."])
+    try out.blank()
+    var titles = try StrList.create()
+    try titles.append("Calc")
+    for index in 0..<functions_data.count:
+        try titles.append(try title_casify(functions_data.key(index)))
+    try put_enum(&out, "Web::CSS::MathFunction", "MathFunctions.h", "MathFunction", "i32", &titles)
+    try out.blank()
+
+    try put_ported(&out, "MathFunctions.cpp", "Web::CSS::math_function_from_string")
+    try out.line("pub func math_function_from_string(name: ak.StringView) -> MathFunction?:")
+    try out.line(f"    if {try equals_ignoring_ascii_case("name", "calc")}:")
+    try out.line("        return MathFunction.calc")
+    for index in 0..<functions_data.count:
+        try out.line(f"    if {try equals_ignoring_ascii_case("name", functions_data.key(index))}:")
+        try out.line(f"        return {try enum_value("MathFunction", titles.at(index + 1))}")
+    try out.line("    return none")
+    return out.text()
+
+# mark: MediaFeatureID ==========================================================================
+
+## generate_libweb_css_media_feature_id.py's VALUE_TYPE_NAMES: the MediaFeatureValueType of a
+## value type, or none.
+func media_feature_value_type_name(type_name: str) -> str?:
+    if type_name == "<mq-boolean>": return "Boolean"
+    if type_name == "<integer>": return "Integer"
+    if type_name == "<length>": return "Length"
+    if type_name == "<ratio>": return "Ratio"
+    if type_name == "<resolution>": return "Resolution"
+    return none
+
+## Emit generated_media_feature_id.lucb from MediaFeatures.json.
+func emit_media_feature_id(media_feature_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_media_feature_id", "the CSS media features",
+        ["MediaFeatureID.h", "MediaFeatureID.cpp"], "generate_libweb_css_media_feature_id.py", "MediaFeatures.json",
+        no_notes())
+    try out.blank()
+    var value_types = try StrList.create()
+    for name in ["Boolean", "Integer", "Length", "Ratio", "Resolution"]:
+        try value_types.append(name)
+    try put_enum(&out, "Web::CSS::MediaFeatureValueType", "MediaFeatureID.h", "MediaFeatureValueType", "i32", &value_types)
+    try out.blank()
+    var titles = try StrList.create()
+    for index in 0..<media_feature_data.count:
+        try titles.append(try title_casify(media_feature_data.key(index)))
+    try put_enum(&out, "Web::CSS::MediaFeatureID", "MediaFeatureID.h", "MediaFeatureId",
+        underlying_type_for_enum(media_feature_data.count), &titles)
+    try out.blank()
+
+    try put_ported(&out, "MediaFeatureID.cpp", "Web::CSS::media_feature_id_from_string")
+    try out.line("pub func media_feature_id_from_string(string: ak.StringView) -> MediaFeatureId?:")
+    for index in 0..<media_feature_data.count:
+        try out.line(f"    if {try equals_ignoring_ascii_case("string", media_feature_data.key(index))}:")
+        try out.line(f"        return {try enum_value("MediaFeatureId", titles.at(index))}")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "MediaFeatureID.cpp", "Web::CSS::string_from_media_feature_id")
+    try out.line("pub func string_from_media_feature_id(media_feature_id: MediaFeatureId) -> ak.StringView:")
+    try out.line("    match media_feature_id:")
+    for index in 0..<media_feature_data.count:
+        try out.line(f"        .{try luce_case(titles.at(index))}: return {try string_view_literal(media_feature_data.key(index))}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "MediaFeatureID.cpp", "Web::CSS::media_feature_type_is_range")
+    try out.line("pub func media_feature_type_is_range(media_feature_id: MediaFeatureId) -> bool:")
+    try out.line("    match media_feature_id:")
+    for index in 0..<media_feature_data.count:
+        let feature_type = media_feature_data.at(index).get("type") else trap("a media feature without a type")
+        let is_range = "true" if feature_type.string() == "range" else "false"
+        try out.line(f"        .{try luce_case(titles.at(index))}: return {is_range}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "MediaFeatureID.cpp", "Web::CSS::media_feature_accepts_type")
+    try out.line("pub func media_feature_accepts_type(media_feature_id: MediaFeatureId, value_type: MediaFeatureValueType) -> bool:")
+    try out.line("    match media_feature_id:")
+    for index in 0..<media_feature_data.count:
+        try out.line(f"        .{try luce_case(titles.at(index))}:")
+        var have_output_value_type_switch = false
+        if let values = media_feature_data.at(index).get("values"):
+            for value_index in 0..<values.count:
+                let type_name = values.at(value_index).string()
+                # Skip keywords.
+                if not starts_with(type_name, "<"):
+                    continue
+                let value_type = media_feature_value_type_name(type_name) else trap(f"Unrecognized media-feature value type: `{type_name}`")
+                if not have_output_value_type_switch:
+                    try out.line("            match value_type:")
+                    have_output_value_type_switch = true
+                try out.line(f"                .{try luce_case(value_type)}: return true")
+        if have_output_value_type_switch:
+            try out.line("                _: return false")
+        else:
+            try out.line("            return false")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "MediaFeatureID.cpp", "Web::CSS::media_feature_accepts_keyword")
+    try out.line("pub func media_feature_accepts_keyword(media_feature_id: MediaFeatureId, keyword: Keyword) -> bool:")
+    try out.line("    match media_feature_id:")
+    for index in 0..<media_feature_data.count:
+        try out.line(f"        .{try luce_case(titles.at(index))}:")
+        var have_output_keyword_switch = false
+        if let values = media_feature_data.at(index).get("values"):
+            for value_index in 0..<values.count:
+                let keyword_string = values.at(value_index).string()
+                # Skip types.
+                if starts_with(keyword_string, "<"):
+                    continue
+                if not have_output_keyword_switch:
+                    try out.line("            match keyword:")
+                    have_output_keyword_switch = true
+                try out.line(f"                .{try luce_case(try title_casify(keyword_string))}: return true")
+        if have_output_keyword_switch:
+            try out.line("                _: return false")
+        else:
+            try out.line("            return false")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "MediaFeatureID.cpp", "Web::CSS::media_feature_keyword_is_falsey")
+    try out.line("pub func media_feature_keyword_is_falsey(media_feature_id: MediaFeatureId, keyword: Keyword) -> bool:")
+    try out.line("    match media_feature_id:")
+    for index in 0..<media_feature_data.count:
+        let false_keywords = media_feature_data.at(index).get("false-keywords") else continue
+        if not false_keywords.truthy():
+            continue
+        try out.line(f"        .{try luce_case(titles.at(index))}:")
+        try out.line("            match keyword:")
+        for keyword_index in 0..<false_keywords.count:
+            try out.line(f"                .{try luce_case(try title_casify(false_keywords.at(keyword_index).string()))}: return true")
+        try out.line("                _: return false")
+    try out.line("        _: return false")
+    return out.text()
+
+# mark: TransformFunctions ======================================================================
+
+## generate_libweb_css_transform_functions.py's title_casify_transform_function: transform
+## function names look like `fooBar`, so the first character is uppercased.
+func title_casify_transform_function(name: str) -> str!:
+    return try upper_first(name)
+
+## generate_libweb_css_transform_functions.py's PARAMETER_TYPE_NAMES.
+func transform_parameter_type_name(name: str) -> str?:
+    if name == "angle": return "Angle"
+    if name == "length": return "Length"
+    if name == "length-none": return "LengthNone"
+    if name == "length-percentage": return "LengthPercentage"
+    if name == "number": return "Number"
+    if name == "number-percentage": return "NumberPercentage"
+    return none
+
+## Python's `text.strip("<>")`.
+func strip_angle_brackets(text: str) -> str:
+    var start: usize = 0
+    var end = text.length
+    while start < end and (text.bytes[start] == '<' or text.bytes[start] == '>'):
+        start += 1
+    while end > start and (text.bytes[end - 1] == '<' or text.bytes[end - 1] == '>'):
+        end -= 1
+    return slice(text, start, end)
+
+## Emit generated_transform_functions.lucb from TransformFunctions.json.
+func emit_transform_functions(transforms_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_transform_functions", "the CSS transform functions",
+        ["TransformFunctions.h", "TransformFunctions.cpp"], "generate_libweb_css_transform_functions.py",
+        "TransformFunctions.json", no_notes())
+    try out.blank()
+    var titles = try StrList.create()
+    for index in 0..<transforms_data.count:
+        try titles.append(try title_casify_transform_function(transforms_data.key(index)))
+    try put_enum(&out, "Web::CSS::TransformFunction", "TransformFunctions.h", "TransformFunction", "i32", &titles)
+    try out.blank()
+    var parameter_types = try StrList.create()
+    for name in ["Angle", "Length", "LengthNone", "LengthPercentage", "Number", "NumberPercentage"]:
+        try parameter_types.append(name)
+    try put_enum(&out, "Web::CSS::TransformFunctionParameterType", "TransformFunctions.h",
+        "TransformFunctionParameterType", "i32", &parameter_types)
+
+    try put_mark(&out, "TransformFunctionParameter")
+    try put_doc(&out, "Web::CSS::TransformFunctionParameter", "TransformFunctions.h")
+    try out.line("pub struct TransformFunctionParameter:")
+    try out.line("    pub var type_: TransformFunctionParameterType")
+    try out.line("    pub var required: bool")
+
+    try put_mark(&out, "TransformFunctionMetadata")
+    try put_doc(&out, "Web::CSS::TransformFunctionMetadata", "TransformFunctions.h")
+    try out.line("pub struct TransformFunctionMetadata:")
+    try out.line("    pub var parameters: ak.Vector[TransformFunctionParameter]")
+
+    try put_mark(&out, "TransformFunctions.cpp")
+    try put_ported(&out, "TransformFunctions.cpp", "Web::CSS::transform_function_from_string")
+    try out.line("pub func transform_function_from_string(name: ak.StringView) -> TransformFunction?:")
+    for index in 0..<transforms_data.count:
+        try out.line(f"    if {try equals_ignoring_ascii_case("name", transforms_data.key(index))}:")
+        try out.line(f"        return {try enum_value("TransformFunction", titles.at(index))}")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "TransformFunctions.cpp", "Web::CSS::to_string(TransformFunction)")
+    try out.line("pub func to_string_transform_function(transform_function: TransformFunction) -> ak.StringView:")
+    try out.line("    match transform_function:")
+    for index in 0..<transforms_data.count:
+        try out.line(f"        .{try luce_case(titles.at(index))}: return {try string_view_literal(transforms_data.key(index))}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "TransformFunctions.cpp", "Web::CSS::transform_function_metadata")
+    try out.line("pub func transform_function_metadata(transform_function: TransformFunction) -> TransformFunctionMetadata:")
+    try out.line("    var metadata = TransformFunctionMetadata()")
+    try out.line("    match transform_function:")
+    for index in 0..<transforms_data.count:
+        try out.line(f"        .{try luce_case(titles.at(index))}:")
+        let parameters = transforms_data.at(index).get("parameters") else trap("a transform function without parameters")
+        for parameter_index in 0..<parameters.count:
+            let parameter = parameters.at(parameter_index)
+            let type_value = parameter.get("type") else trap("a transform function parameter without a type")
+            let parameter_type_name = strip_angle_brackets(type_value.string())
+            let parameter_type = transform_parameter_type_name(parameter_type_name) else trap(f"Unknown transform function parameter type: {parameter_type_name}")
+            let required = parameter.get("required") else trap("a transform function parameter without `required`")
+            try out.line(f"            ak.vector_append_t(&metadata.parameters, TransformFunctionParameter(type_ = {try enum_value("TransformFunctionParameterType", parameter_type)}, required = {required.boolean()}))")
+        try out.line("            return metadata")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    return out.text()

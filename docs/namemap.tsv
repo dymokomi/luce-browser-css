@@ -1,4 +1,29 @@
 # C++ name	package	module	Luce name	file:line	kind
+(r12c: AK::CaseInsensitiveASCIIStringViewTraits conforming to ak.Traits[StringView], for the generated tables.)	luce-browser-css	css_data	CaseInsensitiveAsciiStringViewTraits	-	addition
+(r12c: a C++ function-local static FlyString, made on first use.)	luce-browser-css	css_data	StaticFlyString	-	addition
+(r12c: a C++ function-local static Vector<PropertyID>, made on first use.)	luce-browser-css	css_data	StaticPropertyIds	-	addition
+(r12c: g_stringview_to_keyword_map, built on first use.)	luce-browser-css	css_data	stringview_to_keyword_map	-	addition
+(r12c: ratio_between_units(AngleUnit, AngleUnit)'s lambda ratio_to_canonical_unit.)	luce-browser-css	css_data	ratio_between_units_angle_unit_ratio_to_canonical_unit	-	addition
+(r12c: ratio_between_units(FlexUnit, FlexUnit)'s lambda ratio_to_canonical_unit.)	luce-browser-css	css_data	ratio_between_units_flex_unit_ratio_to_canonical_unit	-	addition
+(r12c: ratio_between_units(FrequencyUnit, FrequencyUnit)'s lambda ratio_to_canonical_unit.)	luce-browser-css	css_data	ratio_between_units_frequency_unit_ratio_to_canonical_unit	-	addition
+(r12c: ratio_between_units(LengthUnit, LengthUnit)'s lambda ratio_to_canonical_unit.)	luce-browser-css	css_data	ratio_between_units_length_unit_ratio_to_canonical_unit	-	addition
+(r12c: ratio_between_units(ResolutionUnit, ResolutionUnit)'s lambda ratio_to_canonical_unit.)	luce-browser-css	css_data	ratio_between_units_resolution_unit_ratio_to_canonical_unit	-	addition
+(r12c: ratio_between_units(TimeUnit, TimeUnit)'s lambda ratio_to_canonical_unit.)	luce-browser-css	css_data	ratio_between_units_time_unit_ratio_to_canonical_unit	-	addition
+(r12c: the FlyString of a StaticFlyString slot, made on the first call.)	luce-browser-css	css_data	static_fly_string	-	addition
+(r12c: the Vector of a StaticPropertyIds slot, made in the C heap on the first call.)	luce-browser-css	css_data	static_property_ids	-	addition
+(r12c: the empty static Vector<PropertyID> of the default cases.)	luce-browser-css	css_data	empty_property_ids	-	addition
+(r12c: the static FlyStrings of camel_case_string_from_property_id.)	luce-browser-css	css_data	camel_case_string_from_property_id_names	-	addition
+(r12c: the static FlyStrings of string_from_property_id.)	luce-browser-css	css_data	string_from_property_id_names	-	addition
+(r12c: the static Vector of property_computation_order.)	luce-browser-css	css_data	property_computation_order_order	-	addition
+(r12c: the static Vectors of expanded_longhands_for_shorthand.)	luce-browser-css	css_data	expanded_longhands_for_shorthand_longhands	-	addition
+(r12c: the static Vectors of longhands_for_shorthand.)	luce-browser-css	css_data	longhands_for_shorthand_longhands	-	addition
+(r12c: the static Vectors of shorthands_for_longhand.)	luce-browser-css	css_data	shorthands_for_longhand_shorthands	-	addition
+(r12c: units_are_compatible(AngleUnit, AngleUnit)'s lambda is_absolute.)	luce-browser-css	css_data	units_are_compatible_angle_unit_is_absolute	-	addition
+(r12c: units_are_compatible(FlexUnit, FlexUnit)'s lambda is_absolute.)	luce-browser-css	css_data	units_are_compatible_flex_unit_is_absolute	-	addition
+(r12c: units_are_compatible(FrequencyUnit, FrequencyUnit)'s lambda is_absolute.)	luce-browser-css	css_data	units_are_compatible_frequency_unit_is_absolute	-	addition
+(r12c: units_are_compatible(LengthUnit, LengthUnit)'s lambda is_absolute.)	luce-browser-css	css_data	units_are_compatible_length_unit_is_absolute	-	addition
+(r12c: units_are_compatible(ResolutionUnit, ResolutionUnit)'s lambda is_absolute.)	luce-browser-css	css_data	units_are_compatible_resolution_unit_is_absolute	-	addition
+(r12c: units_are_compatible(TimeUnit, TimeUnit)'s lambda is_absolute.)	luce-browser-css	css_data	units_are_compatible_time_unit_is_absolute	-	addition
 (r30a: ComponentValue { GuaranteedInvalidValue }: the value form of the constructor.)	luce-browser-css	css_syntax	component_value_from_guaranteed_invalid_value	-	addition
 (r30a: ComponentValue { block }: the value form of the constructor.)	luce-browser-css	css_syntax	component_value_from_simple_block	-	addition
 (r30a: ComponentValue { function }: the value form of the constructor.)	luce-browser-css	css_syntax	component_value_from_function	-	addition
@@ -400,6 +425,7 @@ Web::CSS::WritingMode	luce-browser-css	css_data	WritingMode	Build/Libraries/LibW
 Web::CSS::aliased_pseudo_element_from_string	luce-browser-css	css_data	aliased_pseudo_element_from_string	Build/Libraries/LibWeb/CSS/PseudoElement.h:39	stub
 Web::CSS::animation_type_from_longhand_property	luce-browser-css	css_data	animation_type_from_longhand_property	Build/Libraries/LibWeb/CSS/PropertyID.h:798	stub
 Web::CSS::at_rule_supports_descriptor	luce-browser-css	css_data	at_rule_supports_descriptor	Build/Libraries/LibWeb/CSS/DescriptorID.h:67	stub
+Web::CSS::camel_case_properties_table	luce-browser-css	css_data	camel_case_properties_table	Build/Libraries/LibWeb/CSS/PropertyID.cpp	variable
 Web::CSS::camel_case_string_from_property_id	luce-browser-css	css_data	camel_case_string_from_property_id	Build/Libraries/LibWeb/CSS/PropertyID.h:804	stub
 Web::CSS::canonical_angle_unit	luce-browser-css	css_data	canonical_angle_unit	Build/Libraries/LibWeb/CSS/Units.h:27	stub
 Web::CSS::canonical_flex_unit	luce-browser-css	css_data	canonical_flex_unit	Build/Libraries/LibWeb/CSS/Units.h:37	stub
@@ -417,7 +443,11 @@ Web::CSS::expanded_longhands_for_shorthand	luce-browser-css	css_data	expanded_lo
 Web::CSS::first_inherited_property_id	luce-browser-css	css_data	first_inherited_property_id	Build/Libraries/LibWeb/CSS/PropertyID.h:856	variable
 Web::CSS::first_longhand_property_id	luce-browser-css	css_data	first_longhand_property_id	Build/Libraries/LibWeb/CSS/PropertyID.h:858	variable
 Web::CSS::first_property_id	luce-browser-css	css_data	first_property_id	Build/Libraries/LibWeb/CSS/PropertyID.h:854	variable
+Web::CSS::g_stringview_to_keyword_map	luce-browser-css	css_data	g_stringview_to_keyword_map	Build/Libraries/LibWeb/CSS/Keyword.cpp	variable
+Web::CSS::generate_camel_case_property_table	luce-browser-css	css_data	generate_camel_case_property_table	Build/Libraries/LibWeb/CSS/PropertyID.cpp	ported
+Web::CSS::generate_properties_table	luce-browser-css	css_data	generate_properties_table	Build/Libraries/LibWeb/CSS/PropertyID.cpp	ported
 Web::CSS::get_descriptor_metadata	luce-browser-css	css_data	get_descriptor_metadata	Build/Libraries/LibWeb/CSS/DescriptorID.h:96	stub
+Web::CSS::is_a_custom_property_name_string	luce-browser-css	css_data	is_a_custom_property_name_string	Libraries/LibWeb/CSS/PropertyName.h:23	ported
 Web::CSS::is_absolute	luce-browser-css	css_data	is_absolute	Build/Libraries/LibWeb/CSS/Units.h:130	stub
 Web::CSS::is_animatable_property	luce-browser-css	css_data	is_animatable_property	Build/Libraries/LibWeb/CSS/PropertyID.h:799	stub
 Web::CSS::is_css_wide_keyword	luce-browser-css	css_data	is_css_wide_keyword	Build/Libraries/LibWeb/CSS/Keyword.h:1718	stub
@@ -430,6 +460,7 @@ Web::CSS::is_hex_digit	luce-browser-css	css_syntax	is_hex_digit	Libraries/LibWeb
 Web::CSS::is_ident_code_point	luce-browser-css	css_syntax	is_ident_code_point	Libraries/LibWeb/CSS/CharacterTypes.h:39	ported
 Web::CSS::is_ident_start_code_point	luce-browser-css	css_syntax	is_ident_start_code_point	Libraries/LibWeb/CSS/CharacterTypes.h:31	ported
 Web::CSS::is_inherited_property	luce-browser-css	css_data	is_inherited_property	Build/Libraries/LibWeb/CSS/PropertyID.h:805	stub
+Web::CSS::is_invalid_custom_property_name_string	luce-browser-css	css_data	is_invalid_custom_property_name_string	Libraries/LibWeb/CSS/PropertyName.h:14	ported
 Web::CSS::is_newline	luce-browser-css	css_syntax	is_newline	Libraries/LibWeb/CSS/CharacterTypes.h:52	ported
 Web::CSS::is_non_printable_code_point	luce-browser-css	css_syntax	is_non_printable_code_point	Libraries/LibWeb/CSS/CharacterTypes.h:46	ported
 Web::CSS::is_pseudo_element_root	luce-browser-css	css_data	is_pseudo_element_root	Build/Libraries/LibWeb/CSS/PseudoElement.h:45	stub
@@ -581,6 +612,7 @@ Web::CSS::media_feature_id_from_string	luce-browser-css	css_data	media_feature_i
 Web::CSS::media_feature_keyword_is_falsey	luce-browser-css	css_data	media_feature_keyword_is_falsey	Build/Libraries/LibWeb/CSS/MediaFeatureID.h:64	stub
 Web::CSS::media_feature_type_is_range	luce-browser-css	css_data	media_feature_type_is_range	Build/Libraries/LibWeb/CSS/MediaFeatureID.h:60	stub
 Web::CSS::number_of_longhand_properties	luce-browser-css	css_data	number_of_longhand_properties	Build/Libraries/LibWeb/CSS/PropertyID.h:860	variable
+Web::CSS::properties_table	luce-browser-css	css_data	properties_table	Build/Libraries/LibWeb/CSS/PropertyID.cpp	variable
 Web::CSS::property_accepts_integer	luce-browser-css	css_data	property_accepts_integer	Build/Libraries/LibWeb/CSS/PropertyID.h:828	stub
 Web::CSS::property_accepts_keyword	luce-browser-css	css_data	property_accepts_keyword	Build/Libraries/LibWeb/CSS/PropertyID.h:819	stub
 Web::CSS::property_accepts_number	luce-browser-css	css_data	property_accepts_number	Build/Libraries/LibWeb/CSS/PropertyID.h:830	stub

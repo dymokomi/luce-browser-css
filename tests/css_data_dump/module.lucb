@@ -1,0 +1,74 @@
+#==============================================================================================
+#
+#   css_data_dump - every answer of css_data, as text
+#
+#   DESCRIPTION:
+#       Prints what each generated css_data function answers for every enum value, every
+#       pair that the functions take, and every input string of tests/data/css_data_inputs.txt
+#       (the names of every JSON input, cased three ways, and some strings that are no name).
+#       tests/data/css_data_dump.txt is the same dump printed by a local C++ program over
+#       Ladybird's generated Build/Libraries/LibWeb/CSS/*.cpp at 47c82b38d0; test.sh compares
+#       the two byte for byte, so this program pins css_data to the donor's generated code.
+#
+#       Usage: css_data_dump INPUTS_FILE > DUMP
+#
+#       Copyright (c) 2026 the luce-browser authors.
+#       SPDX-License-Identifier: BSD-2-Clause (see LICENSE)
+#
+#==============================================================================================
+
+import ak
+import c
+import css_data
+import files
+import io
+import strings
+
+## Print the dump for the inputs of `arguments[1]`.
+pub func main(arguments: c.str[]) -> i32!:
+    if arguments.length != 2:
+        print("usage: css_data_dump INPUTS_FILE")
+        return 2
+    let inputs = try files.read(arguments[1])
+    var out = try Out.create()
+    try dump_enums(&out)
+    try dump_keywords(&out)
+    try dump_inputs(&out, inputs)
+    try dump_properties(&out)
+    try dump_descriptors(&out)
+    try dump_small(&out)
+    try dump_units(&out)
+    discard(try io.stdout().write(out.builder.view().bytes))
+    return 0
+
+# mark: Output ==================================================================================
+
+## The text of the dump.
+struct Out:
+    var builder: strings.Builder
+
+    static func create() -> Out!:
+        return Out(builder = try strings.Builder.create(1 << 20))
+
+    ## Append `text`.
+    mutating func p(text: fmt) -> !:
+        discard(try self.builder.write(text))
+
+    ## Append a StringView.
+    mutating func view(text: ak.StringView) -> !:
+        discard(try self.builder.write(ak.string_view_bytes(&text)))
+
+    ## Append a FlyString.
+    mutating func fly(text: ak.FlyString) -> !:
+        try self.view(ak.fly_string_bytes_as_string_view(&text))
+
+    ## Append `1` or `0`.
+    mutating func b(value: bool) -> !:
+        try self.builder.put("1" if value else "0")
+
+## Append an optional enum value as its integer, or `-`.
+func put_optional(out: Out*, value: u64?) -> !:
+    if let present = value:
+        try out.p(f"{present}")
+    else:
+        try out.p("-")

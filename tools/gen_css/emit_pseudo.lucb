@@ -1,0 +1,485 @@
+#==============================================================================================
+#
+#   emit_pseudo - the pseudo-classes and pseudo-elements
+#
+#   DESCRIPTION:
+#       Ports of Meta/Generators/generate_libweb_css_pseudo_class.py and
+#       generate_libweb_css_pseudo_element.py.
+#
+#==============================================================================================
+
+# mark: PseudoClass =============================================================================
+
+## generate_libweb_css_pseudo_class.py's PARAMETER_TYPES: the ParameterType of an argument
+## syntax, or none.
+func pseudo_class_parameter_type(argument: str) -> str?:
+    if argument == "<an+b>": return "ANPlusB"
+    if argument == "<an+b-of>": return "ANPlusBOf"
+    if argument == "<compound-selector>": return "CompoundSelector"
+    if argument == "<forgiving-selector-list>": return "ForgivingSelectorList"
+    if argument == "<forgiving-relative-selector-list>": return "ForgivingRelativeSelectorList"
+    if argument == "<ident>": return "Ident"
+    if argument == "<language-ranges>": return "LanguageRanges"
+    if argument == "<level>#": return "LevelList"
+    if argument == "<relative-selector-list>": return "RelativeSelectorList"
+    if argument == "<selector-list>": return "SelectorList"
+    return none
+
+## Emit generated_pseudo_class.lucb from PseudoClasses.json.
+func emit_pseudo_class(pseudo_classes_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_pseudo_class", "the CSS pseudo-classes",
+        ["PseudoClass.h", "PseudoClass.cpp"], "generate_libweb_css_pseudo_class.py", "PseudoClasses.json", no_notes())
+    try out.blank()
+    var titles = try StrList.create()
+    for index in 0..<pseudo_classes_data.count:
+        if pseudo_classes_data.at(index).has("legacy-alias-for"):
+            continue
+        try titles.append(try title_casify(pseudo_classes_data.key(index)))
+    try titles.append("__Count")
+    try put_enum(&out, "Web::CSS::PseudoClass", "PseudoClass.h", "PseudoClass", "i32", &titles)
+
+    try put_mark(&out, "PseudoClassMetadata")
+    try put_doc(&out, "Web::CSS::PseudoClassMetadata", "PseudoClass.h")
+    try out.line("pub struct PseudoClassMetadata:")
+    try out.line("    pub var parameter_type: PseudoClassMetadataParameterType")
+    try out.line("    pub var is_valid_as_function: bool")
+    try out.line("    pub var is_valid_as_identifier: bool")
+    try out.blank()
+    var parameter_types = try StrList.create()
+    for name in ["None", "ANPlusB", "ANPlusBOf", "CompoundSelector", "ForgivingSelectorList",
+            "ForgivingRelativeSelectorList", "Ident", "LanguageRanges", "LevelList", "RelativeSelectorList",
+            "SelectorList"]:
+        try parameter_types.append(name)
+    try put_enum(&out, "Web::CSS::PseudoClassMetadata::ParameterType", "PseudoClass.h",
+        "PseudoClassMetadataParameterType", "i32", &parameter_types)
+
+    try put_mark(&out, "PseudoClass.cpp")
+    try put_ported(&out, "PseudoClass.cpp", "Web::CSS::pseudo_class_from_string")
+    try out.line("pub func pseudo_class_from_string(string: ak.StringView) -> PseudoClass?:")
+    for index in 0..<pseudo_classes_data.count:
+        let name = pseudo_classes_data.key(index)
+        var target_name = try title_casify(name)
+        if let alias_for = pseudo_classes_data.at(index).get("legacy-alias-for"):
+            target_name = try title_casify(alias_for.string())
+        try out.line(f"    if {try equals_ignoring_ascii_case("string", name)}:")
+        try out.line(f"        return {try enum_value("PseudoClass", target_name)}")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "PseudoClass.cpp", "Web::CSS::pseudo_class_name")
+    try out.line("pub func pseudo_class_name(pseudo_class: PseudoClass) -> ak.StringView:")
+    try out.line("    match pseudo_class:")
+    try out.line("        .count: trap(\"VERIFY_NOT_REACHED\")")
+    for index in 0..<pseudo_classes_data.count:
+        let name = pseudo_classes_data.key(index)
+        if pseudo_classes_data.at(index).has("legacy-alias-for"):
+            continue
+        try out.line(f"        .{try luce_case(try title_casify(name))}: return {try string_view_literal(name)}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "PseudoClass.cpp", "Web::CSS::pseudo_class_metadata")
+    try out.line("pub func pseudo_class_metadata(pseudo_class: PseudoClass) -> PseudoClassMetadata:")
+    try out.line("    match pseudo_class:")
+    try out.line("        .count: trap(\"VERIFY_NOT_REACHED\")")
+    for index in 0..<pseudo_classes_data.count:
+        let name = pseudo_classes_data.key(index)
+        let value = pseudo_classes_data.at(index)
+        if value.has("legacy-alias-for"):
+            continue
+        let argument = value.get("argument") else trap("a pseudo-class without an argument")
+        var argument_string = argument.string()
+        var is_valid_as_identifier = argument_string.length == 0
+        let is_valid_as_function = argument_string.length != 0
+        if ends_with(argument_string, "?"):
+            is_valid_as_identifier = true
+            argument_string = slice(argument_string, 0, argument_string.length - 1)
+        var parameter_type = "None"
+        if is_valid_as_function:
+            parameter_type = pseudo_class_parameter_type(argument_string) else trap(f"Unrecognized pseudo-class argument type: `{argument_string}`")
+        try out.line(f"        .{try luce_case(try title_casify(name))}:")
+        try out.line("            return PseudoClassMetadata(")
+        try out.line(f"                parameter_type = {try enum_value("PseudoClassMetadataParameterType", parameter_type)},")
+        try out.line(f"                is_valid_as_function = {is_valid_as_function},")
+        try out.line(f"                is_valid_as_identifier = {is_valid_as_identifier},")
+        try out.line("            )")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    return out.text()
+
+# mark: PseudoElement ===========================================================================
+
+## generate_libweb_css_pseudo_element.py's PARAMETER_TYPES.
+func pseudo_element_parameter_type(syntax: str) -> str?:
+    if syntax == "<compound-selector>": return "CompoundSelector"
+    if syntax == "<ident>+": return "IdentList"
+    if syntax == "<pt-name-selector>": return "PTNameSelector"
+    return none
+
+## Ported from generate_libweb_css_pseudo_element.py is_alias.
+func is_pseudo_element_alias(pseudo_element: const Json*) -> bool:
+    return pseudo_element.has("alias-for")
+
+## The member `name` of `value` as a bool, `false` when absent (Python's `.get(name, False)`).
+func get_flag(value: const Json*, name: str) -> bool:
+    let flag = value.get(name) else return false
+    return flag.truthy()
+
+## Emit generated_pseudo_element.lucb from PseudoElements.json.
+func emit_pseudo_element(pseudo_elements_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_pseudo_element", "the CSS pseudo-elements",
+        ["PseudoElement.h", "PseudoElement.cpp"], "generate_libweb_css_pseudo_element.py", "PseudoElements.json",
+        no_notes())
+    try out.blank()
+    var titles = try StrList.create()
+    for index in 0..<pseudo_elements_data.count:
+        if is_pseudo_element_alias(pseudo_elements_data.at(index)):
+            continue
+        try titles.append(try title_casify(pseudo_elements_data.key(index)))
+    try titles.append("KnownPseudoElementCount")
+    try titles.append("UnknownWebKit")
+    try put_enum(&out, "Web::CSS::PseudoElement", "PseudoElement.h", "PseudoElement",
+        underlying_type_for_enum(pseudo_elements_data.count), &titles)
+
+    try put_mark(&out, "PseudoElementMetadata")
+    try put_doc(&out, "Web::CSS::PseudoElementMetadata", "PseudoElement.h")
+    try out.line("pub struct PseudoElementMetadata:")
+    try out.line("    pub var parameter_type: PseudoElementMetadataParameterType")
+    try out.line("    pub var is_valid_as_function: bool")
+    try out.line("    pub var is_valid_as_identifier: bool")
+    try out.blank()
+    var parameter_types = try StrList.create()
+    for name in ["None", "CompoundSelector", "IdentList", "PTNameSelector"]:
+        try parameter_types.append(name)
+    try put_enum(&out, "Web::CSS::PseudoElementMetadata::ParameterType", "PseudoElement.h",
+        "PseudoElementMetadataParameterType", "i32", &parameter_types)
+
+    try put_mark(&out, "PseudoElement.cpp")
+    try put_ported(&out, "PseudoElement.cpp", "Web::CSS::pseudo_element_from_string")
+    try out.line("pub func pseudo_element_from_string(string: ak.StringView) -> PseudoElement?:")
+    for index in 0..<pseudo_elements_data.count:
+        if is_pseudo_element_alias(pseudo_elements_data.at(index)):
+            continue
+        let name = pseudo_elements_data.key(index)
+        try out.line(f"    if {try equals_ignoring_ascii_case("string", name)}:")
+        try out.line(f"        return {try enum_value("PseudoElement", try title_casify(name))}")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "PseudoElement.cpp", "Web::CSS::aliased_pseudo_element_from_string")
+    try out.line("pub func aliased_pseudo_element_from_string(string: ak.StringView) -> PseudoElement?:")
+    for index in 0..<pseudo_elements_data.count:
+        let alias_for = pseudo_elements_data.at(index).get("alias-for") else continue
+        try out.line(f"    if {try equals_ignoring_ascii_case("string", pseudo_elements_data.key(index))}:")
+        try out.line(f"        return {try enum_value("PseudoElement", try title_casify(alias_for.string()))}")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "PseudoElement.cpp", "Web::CSS::pseudo_element_name")
+    try out.line("pub func pseudo_element_name(pseudo_element: PseudoElement) -> ak.StringView:")
+    try out.line("    match pseudo_element:")
+    for index in 0..<pseudo_elements_data.count:
+        if is_pseudo_element_alias(pseudo_elements_data.at(index)):
+            continue
+        let name = pseudo_elements_data.key(index)
+        try out.line(f"        .{try luce_case(try title_casify(name))}: return {try string_view_literal(name)}")
+    try out.line("        .known_pseudo_element_count, .unknown_web_kit: trap(\"VERIFY_NOT_REACHED\")")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try emit_pseudo_element_flag_function(&out, pseudo_elements_data, "is_has_allowed_pseudo_element", "is-allowed-in-has", false)
+    try emit_pseudo_element_flag_function(&out, pseudo_elements_data, "is_tree_abiding_pseudo_element", "is-tree-abiding", true)
+    try emit_pseudo_element_flag_function(&out, pseudo_elements_data, "is_element_backed_pseudo_element", "is-element-backed", false)
+    try emit_pseudo_element_flag_function(&out, pseudo_elements_data, "is_pseudo_element_root", "is-pseudo-root", false)
+
+    try put_ported(&out, "PseudoElement.cpp", "Web::CSS::pseudo_element_supports_property")
+    try out.line("pub func pseudo_element_supports_property(pseudo_element: PseudoElement, property_id: PropertyId) -> bool:")
+    try out.line("    match pseudo_element:")
+    for index in 0..<pseudo_elements_data.count:
+        let pseudo_element = pseudo_elements_data.at(index)
+        if is_pseudo_element_alias(pseudo_element):
+            continue
+        # No whitelist = accept everything, by falling back to the default case.
+        let property_whitelist = pseudo_element.get("property-whitelist") else continue
+        try out.line(f"        .{try luce_case(try title_casify(pseudo_elements_data.key(index)))}:")
+        try out.line("            match property_id:")
+        for entry_index in 0..<property_whitelist.count:
+            let entry = property_whitelist.at(entry_index).string()
+            if starts_with(entry, "FIXME:"):
+                continue
+            if not starts_with(entry, "#"):
+                try out.line(f"                .{try luce_case(try title_casify(entry))}: return true")
+                continue
+            # Categories
+            # TODO: Maybe define these in data somewhere too?
+            let group = pseudo_element_property_group(entry) else trap(f"Error: Unrecognized property group name '{entry}' in {pseudo_elements_data.key(index)}")
+            for property_name in group:
+                try out.line(f"                .{try luce_case(try title_casify(property_name))}: return true")
+        try out.line("                _: return false")
+    try out.line("        _: return true")
+    try out.blank()
+
+    try put_ported(&out, "PseudoElement.cpp", "Web::CSS::pseudo_element_metadata")
+    try out.line("pub func pseudo_element_metadata(pseudo_element: PseudoElement) -> PseudoElementMetadata:")
+    try out.line("    match pseudo_element:")
+    for index in 0..<pseudo_elements_data.count:
+        let pseudo_element = pseudo_elements_data.at(index)
+        let name = pseudo_elements_data.key(index)
+        if is_pseudo_element_alias(pseudo_element):
+            continue
+        var pe_type = ""
+        if let type_value = pseudo_element.get("type"):
+            pe_type = type_value.string()
+        var is_valid_as_function = false
+        var is_valid_as_identifier = true
+        if pe_type == "function":
+            is_valid_as_function = true
+            is_valid_as_identifier = false
+        elif pe_type == "both":
+            is_valid_as_function = true
+            is_valid_as_identifier = true
+        var parameter_type = "None"
+        if is_valid_as_function:
+            let function_syntax = pseudo_element.get("function-syntax") else trap(f"Pseudo-element `::{name}` has no `function-syntax`")
+            parameter_type = pseudo_element_parameter_type(function_syntax.string()) else trap(f"Unrecognized pseudo-element parameter type: `{function_syntax.string()}`")
+        elif pseudo_element.has("function-syntax"):
+            trap(f"Pseudo-element `::{name}` has `function-syntax` but is not a function type.")
+        try out.line(f"        .{try luce_case(try title_casify(name))}:")
+        try out.line("            return PseudoElementMetadata(")
+        try out.line(f"                parameter_type = {try enum_value("PseudoElementMetadataParameterType", parameter_type)},")
+        try out.line(f"                is_valid_as_function = {is_valid_as_function},")
+        try out.line(f"                is_valid_as_identifier = {is_valid_as_identifier},")
+        try out.line("            )")
+    try out.line("        .unknown_web_kit:")
+    try out.line("            return PseudoElementMetadata(")
+    try out.line("                parameter_type = PseudoElementMetadataParameterType.none_,")
+    try out.line("                is_valid_as_function = false,")
+    try out.line("                is_valid_as_identifier = true,")
+    try out.line("            )")
+    try out.line("        .known_pseudo_element_count: trap(\"VERIFY_NOT_REACHED\")")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    return out.text()
+
+## One of the pseudo-element predicates: true for the pseudo-elements whose `flag` is set.
+## is_tree_abiding_pseudo_element first answers true for element-backed ones.
+func emit_pseudo_element_flag_function(out: Out*, pseudo_elements_data: const Json*, function_name: str, flag: str, element_backed_first: bool) -> !:
+    try put_ported(out, "PseudoElement.cpp", try cat(["Web::CSS::", function_name]))
+    try out.line(f"pub func {function_name}(pseudo_element: PseudoElement) -> bool:")
+    if element_backed_first:
+        try out.line("    # Element-backed pseudo-elements are always tree-abiding.")
+        try out.line("    # https://drafts.csswg.org/css-pseudo-4/#element-backed")
+        try out.line("    if is_element_backed_pseudo_element(pseudo_element):")
+        try out.line("        return true")
+        try out.blank()
+    try out.line("    match pseudo_element:")
+    for index in 0..<pseudo_elements_data.count:
+        let pseudo_element = pseudo_elements_data.at(index)
+        if is_pseudo_element_alias(pseudo_element):
+            continue
+        if not get_flag(pseudo_element, flag):
+            continue
+        try out.line(f"        .{try luce_case(try title_casify(pseudo_elements_data.key(index)))}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+
+## generate_libweb_css_pseudo_element.py's PROPERTY_GROUPS: the properties a `#group` entry of a
+## property whitelist stands for.
+func pseudo_element_property_group(name: str) -> const str[]?:
+    if name == "#background-properties": return background_properties
+    if name == "#border-properties": return border_properties
+    if name == "#custom-properties": return custom_properties
+    if name == "#font-properties": return font_properties
+    if name == "#inline-layout-properties": return inline_layout_properties
+    if name == "#inline-typesetting-properties": return inline_typesetting_properties
+    if name == "#margin-properties": return margin_properties
+    if name == "#padding-properties": return padding_properties
+    if name == "#text-decoration-properties": return text_decoration_properties
+    return none
+
+let background_properties: str[11] = [
+    # https://drafts.csswg.org/css-backgrounds/#property-index
+    "background",
+    "background-attachment",
+    "background-clip",
+    "background-color",
+    "background-image",
+    "background-origin",
+    "background-position",
+    "background-position-x",
+    "background-position-y",
+    "background-repeat",
+    "background-size",
+]
+
+let border_properties: str[46] = [
+    # https://drafts.csswg.org/css-backgrounds/#property-index
+    "border",
+    "border-block-end",
+    "border-block-end-color",
+    "border-block-end-style",
+    "border-block-end-width",
+    "border-block-start",
+    "border-block-start-color",
+    "border-block-start-style",
+    "border-block-start-width",
+    "border-bottom",
+    "border-bottom-color",
+    "border-bottom-left-radius",
+    "border-bottom-right-radius",
+    "border-bottom-style",
+    "border-bottom-width",
+    "border-color",
+    "border-image-outset",
+    "border-image-repeat",
+    "border-image-slice",
+    "border-image-source",
+    "border-image-width",
+    "border-inline-end",
+    "border-inline-end-color",
+    "border-inline-end-style",
+    "border-inline-end-width",
+    "border-inline-start",
+    "border-inline-start-color",
+    "border-inline-start-style",
+    "border-inline-start-width",
+    "border-left",
+    "border-left-color",
+    "border-left-style",
+    "border-left-width",
+    "border-radius",
+    "border-right",
+    "border-right-color",
+    "border-right-style",
+    "border-right-width",
+    "border-style",
+    "border-top",
+    "border-top-color",
+    "border-top-left-radius",
+    "border-top-right-radius",
+    "border-top-style",
+    "border-top-width",
+    "border-width",
+]
+
+let custom_properties: str[1] = [
+    "custom",
+]
+
+let font_properties: str[17] = [
+    # https://drafts.csswg.org/css-fonts/#property-index
+    "font",
+    "font-family",
+    "font-feature-settings",
+    # FIXME: font-kerning
+    "font-language-override",
+    # FIXME: font-optical-sizing
+    # FIXME: font-palette
+    "font-size",
+    # FIXME: font-size-adjust
+    "font-style",
+    # FIXME: font-synthesis and longhands
+    "font-variant",
+    "font-variant-alternates",
+    "font-variant-caps",
+    "font-variant-east-asian",
+    "font-variant-emoji",
+    "font-variant-ligatures",
+    "font-variant-numeric",
+    "font-variant-position",
+    "font-variation-settings",
+    "font-weight",
+    "font-width",
+]
+
+let inline_layout_properties: str[2] = [
+    # https://drafts.csswg.org/css-inline/#property-index
+    # FIXME: alignment-baseline
+    # FIXME: baseline-shift
+    # FIXME: baseline-source
+    # FIXME: dominant-baseline
+    # FIXME: initial-letter
+    # FIXME: initial-letter-align
+    # FIXME: initial-letter-wrap
+    # FIXME: inline-sizing
+    # FIXME: line-edge-fit
+    "line-height",
+    # FIXME: text-box
+    # FIXME: text-box-edge
+    # FIXME: text-box-trim
+    "vertical-align",
+]
+
+let inline_typesetting_properties: str[15] = [
+    # https://drafts.csswg.org/css-text-4/#property-index
+    # FIXME: hanging-punctuation
+    # FIXME: hyphenate-character
+    # FIXME: hyphenate-limit-chars
+    # FIXME: hyphenate-limit-last
+    # FIXME: hyphenate-limit-lines
+    # FIXME: hyphenate-limit-zone
+    # FIXME: hyphens
+    "letter-spacing",
+    # FIXME: line-break
+    # FIXME: line-padding
+    "overflow-wrap",
+    "tab-size",
+    "text-align",
+    # FIXME: text-align-all
+    # FIXME: text-align-last
+    # FIXME: text-autospace
+    # FIXME: text-group-align
+    "text-indent",
+    "text-justify",
+    # FIXME: text-spacing
+    # FIXME: text-spacing-trim
+    "text-transform",
+    "text-wrap",
+    "text-wrap-mode",
+    "text-wrap-style",
+    "white-space",
+    "white-space-collapse",
+    "white-space-trim",
+    "word-break",
+    # FIXME: word-space-transform
+    "word-spacing",
+    # FIXME: wrap-after
+    # FIXME: wrap-before
+    # FIXME: wrap-inside
+]
+
+let margin_properties: str[11] = [
+    "margin",
+    "margin-block",
+    "margin-block-end",
+    "margin-block-start",
+    "margin-bottom",
+    "margin-inline",
+    "margin-inline-end",
+    "margin-inline-start",
+    "margin-left",
+    "margin-right",
+    "margin-top",
+]
+
+let padding_properties: str[11] = [
+    "padding",
+    "padding-block",
+    "padding-block-end",
+    "padding-block-start",
+    "padding-bottom",
+    "padding-inline",
+    "padding-inline-end",
+    "padding-inline-start",
+    "padding-left",
+    "padding-right",
+    "padding-top",
+]
+
+let text_decoration_properties: str[5] = [
+    "text-decoration",
+    "text-decoration-color",
+    "text-decoration-line",
+    "text-decoration-style",
+    "text-decoration-thickness",
+]

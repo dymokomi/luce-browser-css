@@ -1,0 +1,347 @@
+#==============================================================================================
+#
+#   emit_property_id - generated_property_id.lucb, _2 and _3
+#
+#   DESCRIPTION:
+#       Port of Meta/Generators/generate_libweb_css_property_id.py: from Properties.json
+#       (with Enums.json and LogicalPropertyGroups.json), the PropertyID enum and every
+#       per-property fact that needs no style value: names, inheritance, animation types,
+#       multiplicity, quirks, accepted keywords and integer/number ranges, shorthands and
+#       their longhands, the computation order and the logical property mappings. The
+#       functions that build or test style values (property_initial_value,
+#       property_accepts_type, property_accepted_ranges_by_value_type,
+#       property_resolves_percentages_relative_to and the Angle/Flex/Frequency/Length/
+#       Percentage/Resolution/Time range checks) are the engine's (DESIGN.md §4.1.3).
+#
+#       The C++ is one file; the Luce is three fragments in the C++ order: declarations and
+#       names (generated_property_id, written here), keywords and ranges (_2, written by
+#       emit_property_id_values), shorthands, computation and logical properties (_3, written by
+#       emit_property_id_shorthands).
+#
+#==============================================================================================
+
+## Ported from generate_libweb_css_property_id.py is_legacy_alias.
+func is_legacy_alias(property: const Json*) -> bool:
+    return property.has("legacy-alias-for")
+
+## Ported from generate_libweb_css_property_id.py replace_logical_aliases: each logical alias
+## becomes a copy of the first physical property of its group, overridden by its own members,
+## without quirks.
+func replace_logical_aliases(properties: Json*, logical_property_groups: const Json*) -> !:
+    # Grab the first physical property in each logical group, to use as the template
+    var group_names = try StrList.create()
+    var first_physical = try StrList.create()
+    for index in 0..<logical_property_groups.count:
+        let group_name = logical_property_groups.key(index)
+        let physical = logical_property_groups.at(index).get("physical") else trap(f"No physical properties in group {group_name}")
+        if physical.count == 0:
+            trap(f"No physical properties in group {group_name}")
+        try group_names.append(group_name)
+        try first_physical.append(physical.at(0).string())
+
+    var alias_names = try StrList.create()
+    var alias_targets = try StrList.create()
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let logical_alias_for = properties.at(index).get("logical-alias-for") else continue
+        let group = logical_alias_for.get("group") else trap(f"Logical alias '{name}' is missing its group")
+        var physical_property_name: str? = none
+        for group_index in 0..<group_names.count:
+            if group_names.at(group_index) == group.string():
+                physical_property_name = first_physical.at(group_index)
+        let target = physical_property_name else trap(f"Logical property group '{group.string()}' not found! (Property: '{name}')")
+        try alias_names.append(name)
+        try alias_targets.append(target)
+
+    for index in 0..<alias_names.count:
+        let name = alias_names.at(index)
+        let alias = alias_targets.at(index)
+        let template = properties.get(alias) else trap(f"No property '{alias}' found for logical alias '{name}'")
+        let alias_object = try json_clone(template)
+        # Copy over anything the logical property overrides
+        let logical = properties.get(name) else trap("a logical alias that vanished")
+        for member in 0..<logical.count:
+            try json_set(alias_object, logical.key(member), logical.at(member))
+        # Quirks don't carry across to logical aliases
+        json_remove(alias_object, "quirks")
+        try json_set(properties, name, alias_object)
+
+## Ported from generate_libweb_css_property_id.py populate_all_property_longhands: `all` is the
+## shorthand of every longhand except direction and unicode-bidi.
+func populate_all_property_longhands(properties: Json*) -> !:
+    let all_entry = properties.get("all") else trap("Missing 'all' property")
+    let longhands = all_entry.get("longhands") else trap("'all' has no longhands")
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let value = properties.at(index)
+        if value.has("longhands") or value.has("legacy-alias-for") or name == "direction" or name == "unicode-bidi":
+            continue
+        try json_append(longhands, "", try json_new(.string, name))
+
+## Ported from generate_libweb_css_property_id.py is_animatable_property.
+func property_is_animatable(properties: const Json*, property_name: str) -> bool:
+    let property = properties.get(property_name) else trap(f"no property '{property_name}'")
+    if let animation_type = property.get("animation-type"):
+        return animation_type.string() != "none"
+    let longhands = property.get("longhands") else trap(f"Property '{property_name}' must specify either 'animation-type' or 'longhands'")
+    for index in 0..<longhands.count:
+        if property_is_animatable(properties, longhands.at(index).string()):
+            return true
+    return false
+
+## `PropertyId.x` for the property `name`.
+func property_id_value(name: str) -> str!:
+    return try enum_value("PropertyId", try title_casify(name))
+
+## `.x` for the property `name`, as a match pattern.
+func property_case(name: str) -> str!:
+    return try cat([".", try luce_case(try title_casify(name))])
+
+## The member `name` of `value` as a bool, `default` when absent (Python's `.get(name, default)`).
+func get_flag_or(value: const Json*, name: str, default_: bool) -> bool:
+    let flag = value.get(name) else return default_
+    return flag.truthy()
+
+## The PropertyID data every emitter of this file shares.
+struct PropertyData:
+    var properties: Json*
+    var logical_property_groups: const Json*
+    var enum_names: StrList
+    var underlying: str
+
+## Emit the three PropertyID fragments from Properties.json, Enums.json and
+## LogicalPropertyGroups.json. `outputs` receives them in order.
+func emit_property_id(properties: Json*, enums: const Json*, logical_property_groups: const Json*, outputs: StrList*) -> !:
+    verify_alphabetical(properties, "Properties.json")
+    verify_alphabetical(logical_property_groups, "LogicalPropertyGroups.json")
+    verify_alphabetical(enums, "Enums.json")
+    var enum_names = try StrList.create()
+    for index in 0..<enums.count:
+        try enum_names.append(enums.key(index))
+    try replace_logical_aliases(properties, logical_property_groups)
+    try populate_all_property_longhands(properties)
+    var data = PropertyData(properties = properties, logical_property_groups = logical_property_groups,
+        enum_names = enum_names, underlying = underlying_type_for_enum(properties.count))
+    try outputs.append(try emit_property_id_1(&data))
+    try outputs.append(try emit_property_id_2(&data))
+    try outputs.append(try emit_property_id_3(&data))
+
+# mark: generated_property_id: the header and the names =========================================
+
+func emit_property_id_1(data: PropertyData*) -> str!:
+    let properties = data.properties
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_property_id", "the CSS properties: declarations and names",
+        ["PropertyID.h", "PropertyID.cpp"], "generate_libweb_css_property_id.py",
+        "Properties.json, Enums.json and LogicalPropertyGroups.json",
+        ["The PropertyID functions continue in generated_property_id_2 and _3. The ones that build or",
+            "test style values are the engine's."])
+
+    var shorthand_property_ids = try StrList.create()
+    var inherited_longhand_property_ids = try StrList.create()
+    var noninherited_longhand_property_ids = try StrList.create()
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let value = properties.at(index)
+        # Legacy aliases don't get a PropertyID
+        if is_legacy_alias(value):
+            continue
+        let inherited = value.get("inherited")
+        if value.has("longhands"):
+            if inherited != none:
+                trap(f"Property '{name}' with longhands cannot specify 'inherited'")
+            try shorthand_property_ids.append(name)
+        else:
+            let flag = inherited else trap(f"Property '{name}' is missing 'inherited'")
+            if flag.truthy():
+                try inherited_longhand_property_ids.append(name)
+            else:
+                try noninherited_longhand_property_ids.append(name)
+
+    var titles = try StrList.create()
+    try titles.append("Custom")
+    for ids in [&shorthand_property_ids, &inherited_longhand_property_ids, &noninherited_longhand_property_ids]:
+        for index in 0..<ids.count:
+            try titles.append(try title_casify(ids.at(index)))
+    try put_mark(&out, "PropertyID.h")
+    try put_enum(&out, "Web::CSS::PropertyID", "PropertyID.h", "PropertyId", data.underlying, &titles)
+    try out.blank()
+
+    var animation_types = try StrList.create()
+    for name in ["Discrete", "ByComputedValue", "RepeatableList", "Custom", "None"]:
+        try animation_types.append(name)
+    try put_enum(&out, "Web::CSS::AnimationType", "PropertyID.h", "AnimationType", "i32", &animation_types)
+    try out.blank()
+    var multiplicities = try StrList.create()
+    for name in ["Single", "List", "CoordinatingList"]:
+        try multiplicities.append(name)
+    try put_enum(&out, "Web::CSS::PropertyMultiplicity", "PropertyID.h", "PropertyMultiplicity", "i32", &multiplicities)
+    try out.blank()
+
+    let first_property_id = shorthand_property_ids.at(0)
+    let last_property_id = noninherited_longhand_property_ids.at(noninherited_longhand_property_ids.count - 1)
+    let first_longhand_property_id = inherited_longhand_property_ids.at(0)
+    let last_longhand_property_id = noninherited_longhand_property_ids.at(noninherited_longhand_property_ids.count - 1)
+    let first_inherited_property_id = inherited_longhand_property_ids.at(0)
+    let last_inherited_property_id = inherited_longhand_property_ids.at(inherited_longhand_property_ids.count - 1)
+    for constant in [("first_property_id", first_property_id), ("last_property_id", last_property_id),
+            ("first_inherited_property_id", first_inherited_property_id),
+            ("last_inherited_property_id", last_inherited_property_id),
+            ("first_longhand_property_id", first_longhand_property_id),
+            ("last_longhand_property_id", last_longhand_property_id)]:
+        try put_doc(&out, try cat(["Web::CSS::", constant.0]), "PropertyID.h")
+        try out.line(f"pub let {constant.0}: PropertyId = {try property_id_value(constant.1)}")
+        try out.blank()
+    # to_underlying(last_longhand_property_id) - to_underlying(first_longhand_property_id) + 1
+    let number_of_longhand_properties = inherited_longhand_property_ids.count + noninherited_longhand_property_ids.count
+    try put_doc(&out, "Web::CSS::number_of_longhand_properties", "PropertyID.h")
+    try out.line("# to_underlying(last_longhand_property_id) - to_underlying(first_longhand_property_id) + 1")
+    try out.line(f"pub let number_of_longhand_properties: usize = {number_of_longhand_properties}")
+    try out.blank()
+
+    var quirks = try StrList.create()
+    # https://quirks.spec.whatwg.org/#the-hashless-hex-color-quirk
+    try quirks.append("HashlessHexColor")
+    # https://quirks.spec.whatwg.org/#the-unitless-length-quirk
+    try quirks.append("UnitlessLength")
+    try put_enum(&out, "Web::CSS::Quirk", "PropertyID.h", "Quirk", "i32", &quirks)
+    try out.blank()
+
+    try put_doc(&out, "Web::CSS::LogicalAliasMappingContext", "PropertyID.h")
+    try out.line("pub struct LogicalAliasMappingContext:")
+    try out.line("    pub var writing_mode: WritingMode")
+    try out.line("    pub var direction: Direction")
+    try out.line("    # TODO: text-orientation")
+    try out.blank()
+
+    var group_titles = try StrList.create()
+    for index in 0..<data.logical_property_groups.count:
+        try group_titles.append(try title_casify(data.logical_property_groups.key(index)))
+    try put_enum(&out, "Web::CSS::LogicalPropertyGroup", "PropertyID.h", "LogicalPropertyGroup",
+        underlying_type_for_enum(data.logical_property_groups.count), &group_titles)
+
+    try put_mark(&out, "Names")
+    try out.line("# The tables of property_id_from_camel_case_string and property_id_from_string: C++")
+    try out.line("# statics built before main, here built on first use in the C heap (they hold views of")
+    try out.line("# string literals and live as long as the program).")
+    try out.line("var camel_case_properties_table: ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]")
+    try out.line("var camel_case_properties_table_initialized: bool")
+    try out.line("var properties_table: ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]")
+    try out.line("var properties_table_initialized: bool")
+    try out.blank()
+    for camel in [true, false]:
+        let table = "camel_case_properties_table" if camel else "properties_table"
+        let generator = "generate_camel_case_property_table" if camel else "generate_properties_table"
+        try put_ported(&out, "PropertyID.cpp", try cat(["Web::CSS::", generator]))
+        try out.line(f"func {generator}() -> const ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]*:")
+        try out.line(f"    if {table}_initialized:")
+        try out.line(f"        return &{table}")
+        try out.line("    with memory.heap:")
+        try out.line(f"        let table = &{table}")
+        for index in 0..<properties.count:
+            let name = properties.key(index)
+            var target = name
+            if let legacy_alias_for = properties.at(index).get("legacy-alias-for"):
+                target = legacy_alias_for.string()
+            let key = try camel_casify(name) if camel else name
+            try out.line(f"        discard(ak.hash_map_set(table, {try string_view_literal(key)}, {try property_id_value(target)}))")
+        try out.line(f"    {table}_initialized = true")
+        try out.line(f"    return &{table}")
+        try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_id_from_camel_case_string")
+    try out.line("pub func property_id_from_camel_case_string(string: ak.StringView) -> PropertyId?:")
+    try out.line("    let property_id = ak.hash_map_get_k_const(generate_camel_case_property_table(), string) else return none")
+    try out.line("    return *property_id")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_id_from_string")
+    try out.line("pub func property_id_from_string(string: ak.StringView) -> PropertyId?:")
+    try out.line("    if is_a_custom_property_name_string(string):")
+    try out.line("        return PropertyId.custom")
+    try out.blank()
+    try out.line("    let property_id = ak.hash_map_get_k_const(generate_properties_table(), string) else return none")
+    try out.line("    return *property_id")
+
+    for camel in [false, true]:
+        let function_name = "camel_case_string_from_property_id" if camel else "string_from_property_id"
+        var count: usize = 0
+        for index in 0..<properties.count:
+            if not is_legacy_alias(properties.at(index)):
+                count += 1
+        try out.blank()
+        try out.line(f"# The `static FlyString name`s of {function_name}, one per case, and its")
+        try out.line("# `invalid_property_id_string`.")
+        try out.line(f"var {function_name}_names: StaticFlyString[{count + 1}]")
+        try out.blank()
+        try put_ported(&out, "PropertyID.cpp", try cat(["Web::CSS::", function_name]))
+        try out.line(f"pub func {function_name}(property_id: PropertyId) -> ak.FlyString:")
+        try out.line("    match property_id:")
+        var slot: usize = 0
+        for index in 0..<properties.count:
+            let name = properties.key(index)
+            if is_legacy_alias(properties.at(index)):
+                continue
+            let text = try camel_casify(name) if camel else name
+            try out.line(f"        {try property_case(name)}: return static_fly_string(&{function_name}_names[{slot}], {try literal(text)})")
+            slot += 1
+        try out.line(f"        _: return static_fly_string(&{function_name}_names[{slot}], \"(invalid CSS::PropertyID)\")")
+
+    try put_mark(&out, "Animation, inheritance, layout effects")
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::animation_type_from_longhand_property")
+    try out.line("pub func animation_type_from_longhand_property(property_id: PropertyId) -> AnimationType:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        if value.has("longhands"):
+            if value.has("animation-type"):
+                trap(f"Property '{name}' with longhands cannot specify 'animation-type'")
+            try out.line(f"        {try property_case(name)}: trap(\"VERIFY_NOT_REACHED\")")
+            continue
+        let animation_type = value.get("animation-type") else trap(f"No animation-type specified for property '{name}'")
+        try out.line(f"        {try property_case(name)}: return {try enum_value("AnimationType", try title_casify(animation_type.string()))}")
+    try out.line("        _: return AnimationType.none_")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::is_animatable_property")
+    try out.line("pub func is_animatable_property(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        if is_legacy_alias(properties.at(index)):
+            continue
+        if property_is_animatable(properties, name):
+            try out.line(f"        {try property_case(name)}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::is_inherited_property")
+    try out.line("pub func is_inherited_property(property_id: PropertyId) -> bool:")
+    try out.line(f"    if ({data.underlying})property_id >= ({data.underlying})first_inherited_property_id and ({data.underlying})property_id <= ({data.underlying})last_inherited_property_id:")
+    try out.line("        return true")
+    try out.line("    return false")
+    try out.blank()
+
+    try emit_property_flag_function(&out, properties, "property_affects_layout", "affects-layout", true)
+    try emit_property_flag_function(&out, properties, "property_affects_stacking_context", "affects-stacking-context", false)
+    try emit_property_flag_function(&out, properties, "property_needs_layout_for_getcomputedstyle", "needs-layout-for-getcomputedstyle", false)
+    try emit_property_flag_function(&out, properties, "property_needs_layout_node_for_resolved_value", "needs-layout-node-for-resolved-value", false)
+    return out.text()
+
+## One of the flag predicates: true for the properties whose `flag` is set (`default_` when
+## absent).
+func emit_property_flag_function(out: Out*, properties: const Json*, function_name: str, flag: str, default_: bool) -> !:
+    try put_ported(out, "PropertyID.cpp", try cat(["Web::CSS::", function_name]))
+    try out.line(f"pub func {function_name}(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        if get_flag_or(value, flag, default_):
+            try out.line(f"        {try property_case(properties.key(index))}: return true")
+    try out.line("        _: return false")
+    try out.blank()
