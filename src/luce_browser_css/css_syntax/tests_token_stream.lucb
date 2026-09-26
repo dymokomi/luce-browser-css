@@ -60,8 +60,7 @@ noinline func test_token_stream_basic():
 test "TestCSSTokenStream basic":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_token_stream_basic()
+    test_token_stream_basic()
 
 noinline func test_token_stream_marks():
     var tokens = ak.Vector[Token]()
@@ -109,8 +108,7 @@ noinline func test_token_stream_marks():
 test "TestCSSTokenStream marks":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_token_stream_marks()
+    test_token_stream_marks()
 
 # mark: ComponentValue streams and transactions =================================================
 
@@ -197,8 +195,7 @@ noinline func test_component_values():
 test "ComponentValue: strings, source text, lookups and equality":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_component_values()
+    test_component_values()
 
 noinline func test_component_value_stream():
     var list = ak.Vector[ComponentValue]()
@@ -253,5 +250,4 @@ noinline func test_component_value_stream():
 test "TokenStream of ComponentValues, transactions and tokens_since":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_component_value_stream()
+    test_component_value_stream()

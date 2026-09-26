@@ -478,13 +478,13 @@ pub enum LogicalPropertyGroup as u8:
 # The tables of property_id_from_camel_case_string and property_id_from_string: C++
 # statics built before main, here built on first use in the C heap (they hold views of
 # string literals and live as long as the program).
-var camel_case_properties_table: ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]
+var camel_case_properties_table: ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]
 var camel_case_properties_table_initialized: bool
-var properties_table: ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]
+var properties_table: ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]
 var properties_table_initialized: bool
 
 ## Ported from Build/Libraries/LibWeb/CSS/PropertyID.cpp Web::CSS::generate_camel_case_property_table.
-func generate_camel_case_property_table() -> const ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]*:
+func generate_camel_case_property_table() -> const ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]*:
     if camel_case_properties_table_initialized:
         return &camel_case_properties_table
     with memory.heap:
@@ -941,7 +941,7 @@ func generate_camel_case_property_table() -> const ak.HashMap[ak.StringView, Pro
     return &camel_case_properties_table
 
 ## Ported from Build/Libraries/LibWeb/CSS/PropertyID.cpp Web::CSS::generate_properties_table.
-func generate_properties_table() -> const ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]*:
+func generate_properties_table() -> const ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]*:
     if properties_table_initialized:
         return &properties_table
     with memory.heap:

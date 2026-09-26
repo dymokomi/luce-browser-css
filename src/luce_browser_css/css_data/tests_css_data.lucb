@@ -8,9 +8,6 @@
 #       donor: each expected value was printed by Ladybird's generated C++ at 47c82b38d0 (the
 #       local dump that tests/data/css_data_dump.txt holds in full, which test.sh compares).
 #
-#       Tests that intern FlyStrings run under `with memory.heap`: the fly-string table and the
-#       generated statics outlive the per-test allocator (see ak's tests).
-#
 #       workaround: compiler-issues/ranges_facts_cubic: every test body is a noinline function.
 #
 #==============================================================================================
@@ -101,8 +98,7 @@ noinline func property_from_strings():
     assert(is_invalid_custom_property_name_string(ak.sv("--")))
 
 test "properties: names are FlyStrings made once":
-    with memory.heap:
-        property_names()
+    property_names()
 
 noinline func property_names():
     let name = string_from_property_id(PropertyId.margin_block_start)
@@ -149,8 +145,7 @@ noinline func property_keywords():
     assert(ak.vector_size(&empty) == 0)
 
 test "properties: shorthands and longhands":
-    with memory.heap:
-        property_shorthands()
+    property_shorthands()
 
 noinline func property_shorthands():
     let longhands = longhands_for_shorthand(PropertyId.margin)
@@ -189,8 +184,7 @@ noinline func property_logical_aliases():
 # mark: Descriptors, media features, selectors, transforms, units ==============================
 
 test "descriptors":
-    with memory.heap:
-        descriptors()
+    descriptors()
 
 noinline func descriptors():
     assert(descriptor_id_from_string(AtRuleId.function, ak.sv("--x")) == DescriptorId.custom)
@@ -230,8 +224,7 @@ noinline func selectors_and_features():
     assert(math_function_from_string(ak.sv("CALC")) == MathFunction.calc)
 
 test "units":
-    with memory.heap:
-        units()
+    units()
 
 noinline func units():
     assert(dimension_for_unit(ak.sv("KHZ")) == DimensionType.frequency)

@@ -34,13 +34,3 @@ pub struct PseudoElementTraits: ak.Traits[PseudoElement]:
     func hash_of(key: const PseudoElement*) -> u32: return ak.u32_hash((u32)(u8)*key)
 
     func equals(a: const PseudoElement*, b: const PseudoElement*) -> bool: return *a == *b
-
-## AK::CaseInsensitiveASCIIStringViewTraits (AK/StringView.h:386) as the traits of a HashMap key,
-## for the generated keyword and property tables. Added by region r12c: ak's struct of that
-## name does not conform to ak.Traits[StringView], so css_data forwards to ak's two functions.
-struct CaseInsensitiveAsciiStringViewTraits: ak.Traits[ak.StringView]:
-    var empty_: u8
-
-    func hash_of(key: const ak.StringView*) -> u32: return ak.case_insensitive_ascii_string_view_traits_hash(*key)
-
-    func equals(a: const ak.StringView*, b: const ak.StringView*) -> bool: return ak.case_insensitive_ascii_string_view_traits_equals(*a, *b)

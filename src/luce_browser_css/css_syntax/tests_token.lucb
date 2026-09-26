@@ -51,8 +51,7 @@ noinline func test_token_to_string_1():
 test "Token::to_string and to_debug_string over every token type":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_token_to_string_1()
+    test_token_to_string_1()
 
 noinline func test_token_to_string_2():
     check_token_strings(to_string_input_2, to_string_expected_2)
@@ -60,8 +59,7 @@ noinline func test_token_to_string_2():
 test "Token::to_string: control characters, clamped numbers, escapes":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_token_to_string_2()
+    test_token_to_string_2()
 
 noinline func test_number_serialization():
     let values = number_serialization_values()
@@ -97,8 +95,7 @@ noinline func test_number_serialization():
 test "Number::to_string and serialize_a_number":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_number_serialization()
+    test_number_serialization()
 
 noinline func test_round_to_nearest_integer():
     let values: f64[10] = [0.5, -0.5, 1.5, -1.5, 2.4999, 1e10, -1e10, math.nan, math.infinity, -math.infinity]
@@ -108,8 +105,7 @@ noinline func test_round_to_nearest_integer():
 test "round_to_nearest_integer":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_round_to_nearest_integer()
+    test_round_to_nearest_integer()
 
 noinline func test_number_arithmetic():
     let two = number_create(NumberType.integer, 2.0)
@@ -138,8 +134,7 @@ noinline func test_number_arithmetic():
 test "Number arithmetic, comparison and integer conversion":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_number_arithmetic()
+    test_number_arithmetic()
 
 noinline func test_identifier_serialization():
     for index in 0..<serialization_names.length:
@@ -176,8 +171,7 @@ noinline func test_identifier_serialization():
 test "serialize an identifier, a string and a URL":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_identifier_serialization()
+    test_identifier_serialization()
 
 noinline func test_token_accessors():
     let dimension = token_create_dimension_f64(1e40, ak.fly_string_from_str("px"), test_string("1e40px"))
@@ -222,8 +216,7 @@ func token_hash_type_raw(token: const Token*) -> TokenHashType:
 test "Token accessors, clamping, brackets and equality":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_token_accessors()
+    test_token_accessors()
 
 # mark: Tables from the donor ===================================================================
 

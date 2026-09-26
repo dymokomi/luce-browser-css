@@ -155,8 +155,7 @@ noinline func test_at_rule_walkers():
 test "AtRule and QualifiedRule rule-list walkers and their reports":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_at_rule_walkers()
+    test_at_rule_walkers()
 
 # mark: Blocks, functions, substitution presence ================================================
 
@@ -205,5 +204,4 @@ noinline func test_blocks_and_functions():
 test "SimpleBlock and Function strings, equality, substitution presence":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_blocks_and_functions()
+    test_blocks_and_functions()

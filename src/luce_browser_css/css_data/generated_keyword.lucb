@@ -885,12 +885,12 @@ pub func is_css_wide_keyword(name: ak.StringView) -> bool:
 
 # HashMap<StringView, Keyword, AK::CaseInsensitiveASCIIStringViewTraits> g_stringview_to_keyword_map:
 # a C++ global built before main, here built on first use (the module var of a static).
-var g_stringview_to_keyword_map: ak.HashMap[ak.StringView, Keyword, CaseInsensitiveAsciiStringViewTraits]
+var g_stringview_to_keyword_map: ak.HashMap[ak.StringView, Keyword, ak.CaseInsensitiveAsciiStringViewTraits]
 var g_stringview_to_keyword_map_initialized: bool
 
 # The keyword table, built on first use in the C heap: it holds views of string literals and
 # lives as long as the program, as the C++ global does.
-func stringview_to_keyword_map() -> const ak.HashMap[ak.StringView, Keyword, CaseInsensitiveAsciiStringViewTraits]*:
+func stringview_to_keyword_map() -> const ak.HashMap[ak.StringView, Keyword, ak.CaseInsensitiveAsciiStringViewTraits]*:
     if g_stringview_to_keyword_map_initialized:
         return &g_stringview_to_keyword_map
     with memory.heap:

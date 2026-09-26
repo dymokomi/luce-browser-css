@@ -147,11 +147,9 @@ noinline func test_css_tokenizer_extra_corpus():
 test "Tests/LibWeb/CSSTokenizer corpus":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_css_tokenizer_corpus()
+    test_css_tokenizer_corpus()
 
 test "tests/css_tokenizer_extra corpus (pinned to the donor's css-tokenizer)":
     # Interned FlyStrings outlive the per-test allocator (docs/regions/r02.md), so the
     # test allocates from the process heap.
-    with memory.heap:
-        test_css_tokenizer_extra_corpus()
+    test_css_tokenizer_extra_corpus()

@@ -224,16 +224,16 @@ func emit_property_id_1(data: PropertyData*) -> str!:
     try out.line("# The tables of property_id_from_camel_case_string and property_id_from_string: C++")
     try out.line("# statics built before main, here built on first use in the C heap (they hold views of")
     try out.line("# string literals and live as long as the program).")
-    try out.line("var camel_case_properties_table: ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]")
+    try out.line("var camel_case_properties_table: ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]")
     try out.line("var camel_case_properties_table_initialized: bool")
-    try out.line("var properties_table: ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]")
+    try out.line("var properties_table: ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]")
     try out.line("var properties_table_initialized: bool")
     try out.blank()
     for camel in [true, false]:
         let table = "camel_case_properties_table" if camel else "properties_table"
         let generator = "generate_camel_case_property_table" if camel else "generate_properties_table"
         try put_ported(&out, "PropertyID.cpp", try cat(["Web::CSS::", generator]))
-        try out.line(f"func {generator}() -> const ak.HashMap[ak.StringView, PropertyId, CaseInsensitiveAsciiStringViewTraits]*:")
+        try out.line(f"func {generator}() -> const ak.HashMap[ak.StringView, PropertyId, ak.CaseInsensitiveAsciiStringViewTraits]*:")
         try out.line(f"    if {table}_initialized:")
         try out.line(f"        return &{table}")
         try out.line("    with memory.heap:")
