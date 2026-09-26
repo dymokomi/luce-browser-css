@@ -1,0 +1,29 @@
+#==============================================================================================
+#
+#   property_name - custom property names
+#
+#   DESCRIPTION:
+#       Port of LibWeb/CSS/PropertyName.h (lines 14-27): is_invalid_custom_property_name_string
+#       and is_a_custom_property_name_string. They belong to the engine's PropertyName.h, but
+#       the generated property_id_from_string and descriptor_id_from_string call them, so they
+#       move down to css_data (a declaration move in the style of DESIGN.md §4.1.3); the engine
+#       uses them from here.
+#
+#       Copyright (c) 2024-2025, Sam Atkins <sam@ladybird.org>
+#       Copyright (c) 2026 the luce-browser authors.
+#       SPDX-License-Identifier: BSD-2-Clause (see LICENSE)
+#
+#==============================================================================================
+
+## Ported from Libraries/LibWeb/CSS/PropertyName.h:14 Web::CSS::is_invalid_custom_property_name_string.
+pub func is_invalid_custom_property_name_string(string: ak.StringView) -> bool:
+    # https://drafts.csswg.org/css-variables-2/#typedef-custom-property-name
+    # The <custom-property-name> production corresponds to this: it’s defined as any <dashed-ident>
+    # (a valid identifier that starts with two dashes), except -- itself, which is reserved for future use by CSS.
+    return ak.string_view_eq_string_view(&string, ak.sv("--"))
+
+## Ported from Libraries/LibWeb/CSS/PropertyName.h:23 Web::CSS::is_a_custom_property_name_string.
+# https://drafts.css-houdini.org/css-typed-om-1/#custom-property-name-string
+pub func is_a_custom_property_name_string(string: ak.StringView) -> bool:
+    # A string is a custom property name string if it starts with two dashes (U+002D HYPHEN-MINUS), like --foo.
+    return ak.string_view_starts_with_string_view(&string, ak.sv("--")) and not is_invalid_custom_property_name_string(string)

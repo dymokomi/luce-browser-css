@@ -1,0 +1,261 @@
+#==============================================================================================
+#
+#   tests_css_data - the generated CSS data
+#
+#   DESCRIPTION:
+#       Ported from Tests/LibWeb/TestCSSIDSpeed.cpp (the `basic` case; the benchmark is not
+#       ported) and Tests/LibWeb/TestCSSInheritedProperty.cpp, and focused tests pinned to the
+#       donor: each expected value was printed by Ladybird's generated C++ at 47c82b38d0 (the
+#       local dump that tests/data/css_data_dump.txt holds in full, which test.sh compares).
+#
+#       Tests that intern FlyStrings run under `with memory.heap`: the fly-string table and the
+#       generated statics outlive the per-test allocator (see ak's tests).
+#
+#       workaround: compiler-issues/ranges_facts_cubic: every test body is a noinline function.
+#
+#==============================================================================================
+
+# Whether a StringView holds `text`.
+func view_equals(view: ak.StringView, text: str) -> bool:
+    return ak.string_view_equals(&view, text)
+
+# mark: TestCSSIDSpeed.cpp ======================================================================
+
+test "keyword_from_string: basic":
+    keyword_from_string_basic()
+
+noinline func keyword_from_string_basic():
+    assert(keyword_from_string(ak.sv("italic")) == Keyword.italic)
+    assert(keyword_from_string(ak.sv("inline")) == Keyword.inline)
+    assert(keyword_from_string(ak.sv("small")) == Keyword.small)
+    assert(keyword_from_string(ak.sv("smalL")) == Keyword.small)
+    assert(keyword_from_string(ak.sv("SMALL")) == Keyword.small)
+    assert(keyword_from_string(ak.sv("Small")) == Keyword.small)
+    assert(keyword_from_string(ak.sv("smALl")) == Keyword.small)
+
+# mark: TestCSSInheritedProperty.cpp ============================================================
+
+test "is_inherited_property":
+    is_inherited_property_test()
+
+noinline func is_inherited_property_test():
+    # Test inherited properties
+    assert(is_inherited_property(PropertyId.color))
+    assert(is_inherited_property(PropertyId.font_size))
+    assert(is_inherited_property(PropertyId.visibility))
+
+    # Test non-inherited properties
+    assert(not is_inherited_property(PropertyId.margin))
+    assert(not is_inherited_property(PropertyId.padding))
+    assert(not is_inherited_property(PropertyId.border))
+
+    # Edge cases
+    assert(not is_inherited_property(PropertyId.all))
+
+# mark: Keywords ================================================================================
+
+test "keywords: names, unknown strings and the CSS-wide keywords":
+    keyword_names()
+
+noinline func keyword_names():
+    assert(view_equals(string_from_keyword(Keyword.revert_layer), "revert-layer"))
+    assert(view_equals(string_from_keyword(Keyword.negative_infinity), "-infinity"))
+    assert(view_equals(string_from_keyword(Keyword.invalid), "(invalid CSS::Keyword)"))
+    assert(keyword_from_string(ak.sv("-INFINITY")) == Keyword.negative_infinity)
+    assert(keyword_from_string(ak.sv("Revert-Layer")) == Keyword.revert_layer)
+    assert(keyword_from_string(ak.sv("")) == none)
+    assert(keyword_from_string(ak.sv("margin-top")) == none)
+    assert(is_css_wide_keyword(ak.sv("Revert-Layer")))
+    assert(is_css_wide_keyword(ak.sv("UNSET")))
+    assert(not is_css_wide_keyword(ak.sv("inherit ")))
+    assert(not is_css_wide_keyword(ak.sv("none")))
+
+test "enums: keyword conversions and names":
+    enum_conversions()
+
+noinline func enum_conversions():
+    assert(keyword_to_writing_mode(Keyword.vertical_rl) == WritingMode.vertical_rl)
+    assert(keyword_to_writing_mode(Keyword.auto) == none)
+    assert(to_keyword_direction(Direction.rtl) == Keyword.rtl)
+    assert(view_equals(to_string_absolute_size(AbsoluteSize.xxx_large), "xxx-large"))
+    # An alias of Enums.json (`keyword=member`) converts but is no member of its own.
+    assert(keyword_to_image_rendering(Keyword.optimizespeed) == ImageRendering.pixelated)
+    assert(keyword_to_image_rendering(Keyword.optimizequality) == ImageRendering.smooth)
+
+# mark: Properties ==============================================================================
+
+test "properties: from strings, custom properties and legacy aliases":
+    property_from_strings()
+
+noinline func property_from_strings():
+    assert(property_id_from_string(ak.sv("MARGIN-TOP")) == PropertyId.margin_top)
+    assert(property_id_from_string(ak.sv("marginTop")) == none)
+    assert(property_id_from_camel_case_string(ak.sv("marginTop")) == PropertyId.margin_top)
+    assert(property_id_from_camel_case_string(ak.sv("MARGINTOP")) == PropertyId.margin_top)
+    assert(property_id_from_string(ak.sv("-webkit-align-content")) == PropertyId.align_content)
+    assert(property_id_from_string(ak.sv("--foo")) == PropertyId.custom)
+    assert(property_id_from_string(ak.sv("--")) == none)
+    assert(is_a_custom_property_name_string(ak.sv("--x")))
+    assert(not is_a_custom_property_name_string(ak.sv("--")))
+    assert(not is_a_custom_property_name_string(ak.sv("-x")))
+    assert(is_invalid_custom_property_name_string(ak.sv("--")))
+
+test "properties: names are FlyStrings made once":
+    with memory.heap:
+        property_names()
+
+noinline func property_names():
+    let name = string_from_property_id(PropertyId.margin_block_start)
+    assert(ak.fly_string_eq_string_view(&name, ak.sv("margin-block-start")))
+    let again = string_from_property_id(PropertyId.margin_block_start)
+    assert(ak.fly_string_eq_fly_string(&name, &again))
+    let camel = camel_case_string_from_property_id(PropertyId.margin_block_start)
+    assert(ak.fly_string_eq_string_view(&camel, ak.sv("marginBlockStart")))
+    let custom = string_from_property_id(PropertyId.custom)
+    assert(ak.fly_string_eq_string_view(&custom, ak.sv("(invalid CSS::PropertyID)")))
+
+test "properties: flags, multiplicity, quirks and ranges":
+    property_flags()
+
+noinline func property_flags():
+    assert(animation_type_from_longhand_property(PropertyId.margin_top) == AnimationType.by_computed_value)
+    assert(animation_type_from_longhand_property(PropertyId.custom) == AnimationType.none_)
+    assert(is_animatable_property(PropertyId.border))
+    assert(not is_animatable_property(PropertyId.will_change))
+    assert(property_has_quirk(PropertyId.margin_top, .unitless_length))
+    assert(not property_has_quirk(PropertyId.margin_top, .hashless_hex_color))
+    assert(not property_has_quirk(PropertyId.margin_block_start, .unitless_length))
+    assert(property_is_positional_value_list_shorthand(PropertyId.margin))
+    assert(property_requires_computation_with_cascaded_value(PropertyId.margin_top))
+    assert(not property_requires_computation_with_initial_value(PropertyId.margin_top))
+    assert(property_accepts_integer(PropertyId.z_index, -1000000))
+    assert(not property_accepts_number(PropertyId.font_weight, 0.5))
+    assert(property_accepts_number(PropertyId.font_weight, 1000.0))
+    assert(not property_accepts_number(PropertyId.font_weight, 1000.5))
+    assert(first_property_id == PropertyId.all)
+    assert(number_of_longhand_properties == (usize)((u16)last_longhand_property_id - (u16)first_longhand_property_id + 1))
+
+test "properties: keywords and custom-ident blacklists":
+    property_keywords()
+
+noinline func property_keywords():
+    assert(property_accepts_keyword(PropertyId.writing_mode, Keyword.vertical_rl))
+    assert(not property_accepts_keyword(PropertyId.writing_mode, Keyword.auto))
+    assert(not property_accepts_keyword(PropertyId.margin_top, Keyword.vertical_rl))
+    let blacklist = property_custom_ident_blacklist(PropertyId.will_change)
+    assert(ak.vector_size(&blacklist) == 6)
+    assert(ak.string_view_equals(ak.vector_at_const(&blacklist, 5), "will-change"))
+    let empty = property_custom_ident_blacklist(PropertyId.margin_top)
+    assert(ak.vector_size(&empty) == 0)
+
+test "properties: shorthands and longhands":
+    with memory.heap:
+        property_shorthands()
+
+noinline func property_shorthands():
+    let longhands = longhands_for_shorthand(PropertyId.margin)
+    assert(ak.vector_size(&longhands) == 4)
+    assert(*ak.vector_at_const(&longhands, 0) == PropertyId.margin_top)
+    assert(*ak.vector_at_const(&longhands, 3) == PropertyId.margin_left)
+    let expanded = expanded_longhands_for_shorthand(PropertyId.border)
+    assert(ak.vector_size(&expanded) == 17)
+    let shorthands = shorthands_for_longhand(PropertyId.margin_top)
+    assert(ak.vector_size(&shorthands) == 2)
+    assert(*ak.vector_at_const(&shorthands, 0) == PropertyId.all)
+    assert(*ak.vector_at_const(&shorthands, 1) == PropertyId.margin)
+    # The static Vector is made once: a second call answers the same storage.
+    let again = longhands_for_shorthand(PropertyId.margin)
+    assert(again.m_outline_buffer == longhands.m_outline_buffer)
+    let none_ = longhands_for_shorthand(PropertyId.margin_top)
+    assert(ak.vector_size(&none_) == 0)
+    let order = property_computation_order()
+    assert(*ak.vector_at_const(&order, 0) == PropertyId.math_depth)
+    assert(ak.vector_size(&order) == number_of_longhand_properties)
+
+test "properties: logical aliases":
+    property_logical_aliases()
+
+noinline func property_logical_aliases():
+    let vertical_rl = LogicalAliasMappingContext(writing_mode = .vertical_rl, direction = .ltr)
+    let horizontal = LogicalAliasMappingContext(writing_mode = .horizontal_tb, direction = .rtl)
+    assert(property_is_logical_alias(PropertyId.margin_block_start))
+    assert(map_logical_alias_to_physical_property(PropertyId.margin_block_start, vertical_rl) == PropertyId.margin_right)
+    assert(map_logical_alias_to_physical_property(PropertyId.margin_block_start, horizontal) == PropertyId.margin_top)
+    assert(map_logical_alias_to_physical_property(PropertyId.margin_top, vertical_rl) == PropertyId.margin_top)
+    assert(map_physical_property_to_logical_alias(PropertyId.margin_right, vertical_rl) == PropertyId.margin_block_start)
+    assert(logical_property_group_for_property(PropertyId.margin_block_start) == LogicalPropertyGroup.margin)
+    assert(logical_property_group_for_property(PropertyId.color) == none)
+
+# mark: Descriptors, media features, selectors, transforms, units ==============================
+
+test "descriptors":
+    with memory.heap:
+        descriptors()
+
+noinline func descriptors():
+    assert(descriptor_id_from_string(AtRuleId.function, ak.sv("--x")) == DescriptorId.custom)
+    assert(descriptor_id_from_string(AtRuleId.font_face, ak.sv("--x")) == none)
+    assert(descriptor_id_from_string(AtRuleId.page, ak.sv("MARGIN-TOP")) == DescriptorId.margin_top)
+    assert(at_rule_supports_descriptor(AtRuleId.font_face, DescriptorId.font_display))
+    assert(not at_rule_supports_descriptor(AtRuleId.page, DescriptorId.font_display))
+    let metadata = get_descriptor_metadata(AtRuleId.font_face, DescriptorId.font_display)
+    assert(ak.vector_size(&metadata.syntax) == 5)
+    match *ak.vector_at_const(&metadata.syntax, 0):
+        .keyword(value): assert(value == Keyword.auto)
+        _: trap("font-display's syntax starts with a keyword")
+    let at_rule_name = to_string_at_rule_id(AtRuleId.counter_style)
+    assert(ak.fly_string_eq_string_view(&at_rule_name, ak.sv("@counter-style")))
+
+test "media features, pseudo-classes, pseudo-elements and transform functions":
+    selectors_and_features()
+
+noinline func selectors_and_features():
+    assert(media_feature_id_from_string(ak.sv("HOVER")) == MediaFeatureId.hover)
+    assert(media_feature_accepts_keyword(MediaFeatureId.hover, Keyword.none_))
+    assert(media_feature_keyword_is_falsey(MediaFeatureId.hover, Keyword.none_))
+    assert(media_feature_type_is_range(MediaFeatureId.color))
+    assert(media_feature_accepts_type(MediaFeatureId.color, .integer))
+    let nth_child = pseudo_class_metadata(PseudoClass.nth_child)
+    assert(nth_child.parameter_type == PseudoClassMetadataParameterType.an_plus_b_of)
+    assert(nth_child.is_valid_as_function and not nth_child.is_valid_as_identifier)
+    assert(pseudo_class_from_string(ak.sv("NTH-CHILD")) == PseudoClass.nth_child)
+    assert(pseudo_element_from_string(ak.sv("first-letter")) == PseudoElement.first_letter)
+    assert(not pseudo_element_supports_property(PseudoElement.first_letter, PropertyId.all))
+    assert(pseudo_element_supports_property(PseudoElement.first_letter, PropertyId.margin_top))
+    assert(pseudo_element_metadata(PseudoElement.unknown_web_kit).is_valid_as_identifier)
+    assert(transform_function_from_string(ak.sv("MATRIX3D")) == TransformFunction.matrix3_d)
+    let matrix = transform_function_metadata(TransformFunction.matrix)
+    assert(ak.vector_size(&matrix.parameters) == 6)
+    assert(environment_variable_dimension_count(EnvironmentVariable.viewport_segment_top) == 2)
+    assert(math_function_from_string(ak.sv("CALC")) == MathFunction.calc)
+
+test "units":
+    with memory.heap:
+        units()
+
+noinline func units():
+    assert(dimension_for_unit(ak.sv("KHZ")) == DimensionType.frequency)
+    assert(dimension_for_unit(ak.sv("")) == none)
+    assert(string_to_length_unit(ak.sv("Q")) == LengthUnit.q)
+    assert(canonical_length_unit() == LengthUnit.px)
+    assert(ratio_between_units_length_unit(LengthUnit.in_, LengthUnit.px) == 96.0)
+    assert(ratio_between_units_length_unit(LengthUnit.cm, LengthUnit.mm) == 10.0)
+    assert(ratio_between_units_length_unit(LengthUnit.cm, LengthUnit.in_) == 0.39370078740157477)
+    assert(ratio_between_units_angle_unit(AngleUnit.rad, AngleUnit.deg) == 57.29577951308232)
+    assert(units_are_compatible_length_unit(LengthUnit.cm, LengthUnit.pt))
+    assert(not units_are_compatible_length_unit(LengthUnit.em, LengthUnit.px))
+    assert(is_font_relative(LengthUnit.rlh) and is_relative(LengthUnit.rlh))
+    assert(is_viewport_relative(LengthUnit.dvmax))
+    let name = to_string_frequency_unit(FrequencyUnit.k_hz)
+    assert(ak.fly_string_eq_string_view(&name, ak.sv("kHz")))
+
+test "traits hash enums as AK does":
+    enum_traits()
+
+noinline func enum_traits():
+    var property_traits: PropertyIdTraits
+    let property_id = PropertyId.margin_top
+    assert(property_traits.hash_of(&property_id) == ak.u32_hash(282))
+    let pseudo_element = PseudoElement.marker
+    var pseudo_element_traits: PseudoElementTraits
+    assert(pseudo_element_traits.hash_of(&pseudo_element) == ak.u32_hash(7))

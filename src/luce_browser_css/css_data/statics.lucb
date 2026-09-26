@@ -1,0 +1,53 @@
+#==============================================================================================
+#
+#   statics - the function-local statics of the generated code
+#
+#   DESCRIPTION:
+#       The generated C++ returns references to function-local statics: `static FlyString
+#       name = "..."_fly_string;` in string_from_property_id, `static Vector<PropertyID>
+#       longhands = { ... };` in longhands_for_shorthand and its kin. DESIGN.md §2.6 makes a
+#       C++ static local a module var with an initialized flag; these are the slot types the
+#       generated fragments declare and the helpers that fill a slot on first use.
+#
+#       A static Vector holds only PropertyIDs, so it is built in the C heap (`with
+#       memory.heap`), where it lives as long as the program, as the C++ static does, whatever
+#       allocator is current at the first call. A static FlyString is interned in AK's
+#       fly-string table like any other, with the allocators of the first call; a slot keeps
+#       it as a module var (see docs/regions/r12c.md for what that asks of the engine).
+#
+#       Copyright (c) 2026 the luce-browser authors.
+#       SPDX-License-Identifier: BSD-2-Clause (see LICENSE)
+#
+#==============================================================================================
+
+## A C++ function-local `static FlyString`, made on first use.
+struct StaticFlyString:
+    var value: ak.FlyString
+    var initialized: bool
+
+## The FlyString of `slot`, made from `text` (`"text"_fly_string`) on the first call.
+func static_fly_string(slot: StaticFlyString*, text: str) -> ak.FlyString:
+    if not slot.initialized:
+        slot.value = ak.fly_string_from_str(text)
+        slot.initialized = true
+    return slot.value
+
+## A C++ function-local `static Vector<PropertyID>`, made on first use.
+struct StaticPropertyIds:
+    var value: ak.Vector[PropertyId]
+    var initialized: bool
+
+## The Vector of `slot`, made from `ids` (the C++ initializer list) on the first call. The C++
+## returns a `Vector<PropertyID> const&`: callers read it, and clone it before changing it.
+func static_property_ids(slot: StaticPropertyIds*, ids: const PropertyId[]) -> ak.Vector[PropertyId]:
+    if not slot.initialized:
+        with memory.heap:
+            ak.vector_construct_opaque(&slot.value, ids)
+        slot.initialized = true
+    return slot.value
+
+## The `static Vector<PropertyID> empty_longhands;` (and `empty_shorthands`) of the default
+## cases: an empty Vector.
+func empty_property_ids() -> ak.Vector[PropertyId]:
+    var empty: ak.Vector[PropertyId]
+    return empty

@@ -1,0 +1,204 @@
+#==============================================================================================
+#
+#   emit_descriptors - generated_descriptor_id.lucb
+#
+#   DESCRIPTION:
+#       Port of Meta/Generators/generate_libweb_css_descriptors.py: from Descriptors.json, the
+#       at-rules, the descriptors of all of them, which at-rule accepts which descriptor, and
+#       each descriptor's syntax. descriptor_initial_value() parses style values and is the
+#       engine's.
+#
+#==============================================================================================
+
+## Ported from generate_libweb_css_descriptors.py is_legacy_alias.
+func is_descriptor_legacy_alias(descriptor: const Json*) -> bool:
+    return descriptor.has("legacy-alias-for")
+
+## The `descriptors` object of an at-rule, or an empty one (Python's `.get("descriptors", {})`).
+func at_rule_descriptors(at_rule: const Json*) -> const Json*!:
+    if let descriptors = at_rule.get("descriptors"):
+        return descriptors
+    return try json_new(.object, "")
+
+## Ported from generate_libweb_css_descriptors.py collect_all_descriptors: every descriptor
+## name that is not a legacy alias, once, in code point order.
+func collect_all_descriptors(at_rules_data: const Json*) -> StrList!:
+    var names = try StrList.create()
+    for at_rule_index in 0..<at_rules_data.count:
+        let descriptors = try at_rule_descriptors(at_rules_data.at(at_rule_index))
+        for index in 0..<descriptors.count:
+            if is_descriptor_legacy_alias(descriptors.at(index)):
+                continue
+            let name = descriptors.key(index)
+            if not names.contains(name):
+                try names.append(name)
+    sort_strings(&names)
+    return names
+
+## generate_libweb_css_descriptors.py's VALUE_TYPE_NAMES.
+func descriptor_value_type_name(entry: str) -> str?:
+    if entry == "<family-name>": return "FamilyName"
+    if entry == "<font-src-list>": return "FontSrcList"
+    if entry == "<font-weight-absolute>{1,2}": return "FontWeightAbsolutePair"
+    if entry == "<declaration-value>?": return "OptionalDeclarationValue"
+    if entry == "<length>": return "Length"
+    if entry == "<page-size>": return "PageSize"
+    if entry == "<percentage [0,∞]>": return "PositivePercentage"
+    if entry == "<string>": return "String"
+    if entry == "<unicode-range-token>#": return "UnicodeRangeTokens"
+    if entry == "<counter-style-system>": return "CounterStyleSystem"
+    if entry == "<counter-style-negative>": return "CounterStyleNegative"
+    if entry == "<symbol>": return "Symbol"
+    if entry == "<symbol>+": return "Symbols"
+    if entry == "<counter-style-range>": return "CounterStyleRange"
+    if entry == "<counter-style-pad>": return "CounterStylePad"
+    if entry == "<counter-style-name>": return "CounterStyleName"
+    if entry == "<counter-style-additive-symbols>": return "CounterStyleAdditiveSymbols"
+    return none
+
+## Ported from generate_libweb_css_descriptors.py generate_syntax_list: append each entry of a
+## descriptor's syntax to `metadata.syntax`.
+func generate_syntax_list(out: Out*, syntax: const Json*, indent: str) -> !:
+    let variant = "KeywordOrPropertyIdOrDescriptorMetadataValueType"
+    for index in 0..<syntax.count:
+        let entry = syntax.at(index).string()
+        var alternative: str
+        if starts_with(entry, "<'"):
+            # Property reference like <'font-feature-settings'>
+            let property_name = try title_casify(slice(entry, 2, entry.length - 2))
+            alternative = try cat([variant, ".property_id(value = ", try enum_value("PropertyId", property_name), ")"])
+        elif starts_with(entry, "<"):
+            # Value type
+            # FIXME: Actually parse the grammar, instead of hard-coding the options!
+            let value_type = descriptor_value_type_name(entry) else trap(f"Unrecognized value type: `{entry}`")
+            alternative = try cat([variant, ".descriptor_metadata_value_type(value = ", try enum_value("DescriptorMetadataValueType", value_type), ")"])
+        elif entry == "crop || cross":
+            # FIXME: This is extra hacky.
+            alternative = try cat([variant, ".descriptor_metadata_value_type(value = DescriptorMetadataValueType.crop_or_cross)"])
+        else:
+            # Keyword
+            alternative = try cat([variant, ".keyword(value = ", try enum_value("Keyword", try title_casify(entry)), ")"])
+        try out.line(f"{indent}ak.vector_append_t(&metadata.syntax, {alternative})")
+
+## Emit generated_descriptor_id.lucb from Descriptors.json.
+func emit_descriptors(at_rules_data: const Json*) -> str!:
+    let all_descriptors = try collect_all_descriptors(at_rules_data)
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_descriptor_id", "the CSS at-rules and their descriptors",
+        ["DescriptorID.h", "DescriptorID.cpp"], "generate_libweb_css_descriptors.py", "Descriptors.json",
+        ["descriptor_initial_value(), which parses style values, is the engine's."])
+    try out.blank()
+
+    var at_rule_titles = try StrList.create()
+    for index in 0..<at_rules_data.count:
+        try at_rule_titles.append(try title_casify(at_rules_data.key(index)))
+    try put_enum(&out, "Web::CSS::AtRuleID", "DescriptorID.h", "AtRuleId", underlying_type_for_enum(at_rules_data.count), &at_rule_titles)
+    try out.blank()
+    var descriptor_titles = try StrList.create()
+    for index in 0..<all_descriptors.count:
+        try descriptor_titles.append(try title_casify(all_descriptors.at(index)))
+    try descriptor_titles.append("Custom")
+    try put_enum(&out, "Web::CSS::DescriptorID", "DescriptorID.h", "DescriptorId", underlying_type_for_enum(all_descriptors.count), &descriptor_titles)
+
+    try put_mark(&out, "DescriptorMetadata")
+    try put_doc(&out, "Web::CSS::DescriptorMetadata", "DescriptorID.h")
+    try out.line("pub struct DescriptorMetadata:")
+    try out.line("    pub var syntax: ak.Vector[KeywordOrPropertyIdOrDescriptorMetadataValueType]")
+    try out.line("    pub var allow_arbitrary_substitution_functions: bool  # C++ default: { false }")
+    try out.blank()
+    var value_types = try StrList.create()
+    # FIXME: Parse the grammar instead of hard-coding all the options!
+    for name in ["CounterStyleSystem", "CounterStyleAdditiveSymbols", "CounterStyleName", "CounterStyleNegative",
+            "CounterStylePad", "CounterStyleRange", "CropOrCross", "FamilyName", "FontSrcList",
+            "FontWeightAbsolutePair", "Length", "OptionalDeclarationValue", "PageSize", "PositivePercentage",
+            "String", "Symbol", "Symbols", "UnicodeRangeTokens"]:
+        try value_types.append(name)
+    try put_enum(&out, "Web::CSS::DescriptorMetadata::ValueType", "DescriptorID.h", "DescriptorMetadataValueType", "i32", &value_types)
+
+    try put_mark(&out, "DescriptorID.cpp")
+    try put_ported(&out, "DescriptorID.cpp", "Web::CSS::to_string(AtRuleID)")
+    try out.line("pub func to_string_at_rule_id(at_rule_id: AtRuleId) -> ak.FlyString:")
+    try out.line("    match at_rule_id:")
+    for index in 0..<at_rules_data.count:
+        try out.line(f"        .{try luce_case(at_rule_titles.at(index))}: return {try fly_string_literal(try cat(["@", at_rules_data.key(index)]))}")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "DescriptorID.cpp", "Web::CSS::descriptor_id_from_string")
+    try out.line("pub func descriptor_id_from_string(at_rule_id: AtRuleId, string: ak.StringView) -> DescriptorId?:")
+    try out.line("    match at_rule_id:")
+    for index in 0..<at_rules_data.count:
+        let at_rule = at_rules_data.at(index)
+        try out.line(f"        .{try luce_case(at_rule_titles.at(index))}:")
+        if at_rule.has("custom-descriptors"):
+            try out.line("            if is_a_custom_property_name_string(string):")
+            try out.line("                return DescriptorId.custom")
+        let descriptors = at_rule.get("descriptors") else trap("an at-rule without descriptors")
+        for descriptor_index in 0..<descriptors.count:
+            let descriptor_name = descriptors.key(descriptor_index)
+            var result_name = try title_casify(descriptor_name)
+            if let alias_for = descriptors.at(descriptor_index).get("legacy-alias-for"):
+                result_name = try title_casify(alias_for.string())
+            try out.line(f"            if {try equals_ignoring_ascii_case("string", descriptor_name)}:")
+            try out.line(f"                return {try enum_value("DescriptorId", result_name)}")
+    try out.line("        _: return none")
+    try out.line("    return none")
+    try out.blank()
+
+    try put_ported(&out, "DescriptorID.cpp", "Web::CSS::to_string(DescriptorID)")
+    try out.line("pub func to_string_descriptor_id(descriptor_id: DescriptorId) -> ak.FlyString:")
+    try out.line("    match descriptor_id:")
+    for index in 0..<all_descriptors.count:
+        try out.line(f"        .{try luce_case(descriptor_titles.at(index))}: return {try fly_string_literal(all_descriptors.at(index))}")
+    try out.line("        .custom: trap(\"VERIFY_NOT_REACHED\")")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "DescriptorID.cpp", "Web::CSS::at_rule_supports_descriptor")
+    try out.line("pub func at_rule_supports_descriptor(at_rule_id: AtRuleId, descriptor_id: DescriptorId) -> bool:")
+    try out.line("    match at_rule_id:")
+    for index in 0..<at_rules_data.count:
+        let at_rule = at_rules_data.at(index)
+        try out.line(f"        .{try luce_case(at_rule_titles.at(index))}:")
+        try out.line("            match descriptor_id:")
+        let descriptors = at_rule.get("descriptors") else trap("an at-rule without descriptors")
+        for descriptor_index in 0..<descriptors.count:
+            if is_descriptor_legacy_alias(descriptors.at(descriptor_index)):
+                continue
+            try out.line(f"                .{try luce_case(try title_casify(descriptors.key(descriptor_index)))}: return true")
+        if at_rule.has("custom-descriptors"):
+            try out.line("                .custom: return true")
+        try out.line("                _: return false")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.blank()
+
+    try put_ported(&out, "DescriptorID.cpp", "Web::CSS::get_descriptor_metadata")
+    try out.line("pub func get_descriptor_metadata(at_rule_id: AtRuleId, descriptor_id: DescriptorId) -> DescriptorMetadata:")
+    try out.line("    match at_rule_id:")
+    for index in 0..<at_rules_data.count:
+        let at_rule = at_rules_data.at(index)
+        try out.line(f"        .{try luce_case(at_rule_titles.at(index))}:")
+        try out.line("            match descriptor_id:")
+        let descriptors = at_rule.get("descriptors") else trap("an at-rule without descriptors")
+        for descriptor_index in 0..<descriptors.count:
+            let descriptor = descriptors.at(descriptor_index)
+            if is_descriptor_legacy_alias(descriptor):
+                continue
+            try out.line(f"                .{try luce_case(try title_casify(descriptors.key(descriptor_index)))}:")
+            try emit_descriptor_metadata(&out, descriptor)
+        if let custom_descriptors = at_rule.get("custom-descriptors"):
+            try out.line("                .custom:")
+            try emit_descriptor_metadata(&out, custom_descriptors)
+        try out.line("                _: trap(\"VERIFY_NOT_REACHED\")")
+    try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    return out.text()
+
+# One case of get_descriptor_metadata: the metadata of `descriptor`.
+func emit_descriptor_metadata(out: Out*, descriptor: const Json*) -> !:
+    let indent = "                    "
+    try out.line(f"{indent}var metadata = DescriptorMetadata()")
+    let syntax = descriptor.get("syntax") else trap("a descriptor without a syntax")
+    try generate_syntax_list(out, syntax, indent)
+    let allow_arbitrary = get_flag(descriptor, "allow-arbitrary-substitution-functions")
+    try out.line(f"{indent}metadata.allow_arbitrary_substitution_functions = {allow_arbitrary}")
+    try out.line(f"{indent}return metadata")

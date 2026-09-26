@@ -1,0 +1,152 @@
+#==============================================================================================
+#
+#   emit_enums - generated_enums.lucb and generated_keyword.lucb
+#
+#   DESCRIPTION:
+#       Port of Meta/Generators/generate_libweb_css_enums.py (Enums.json: the keyword enums
+#       of CSS properties, with keyword_to_X, to_keyword and to_string for each) and
+#       generate_libweb_css_keyword.py (Keywords.json: the Keyword enum, its name table and
+#       is_css_wide_keyword).
+#
+#==============================================================================================
+
+## Whether an Enums.json member is an alias `keyword=member` ("Don't include aliases in the
+## enum").
+func is_enum_alias(member_name: str) -> bool:
+    return contains(member_name, "=")
+
+## Emit generated_enums.lucb from Enums.json.
+func emit_enums(enums_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_enums", "the keyword enums of CSS properties",
+        ["Enums.h", "Enums.cpp"], "generate_libweb_css_enums.py", "Enums.json", no_notes())
+    for enum_index in 0..<enums_data.count:
+        let name = enums_data.key(enum_index)
+        let value = enums_data.at(enum_index)
+        let name_titlecase = try title_casify(name)
+        let name_snakecase = try snake_casify(name)
+        let type_name = try luce_pascal(name_titlecase)
+        let suffix = try overload_suffix(name_titlecase)
+
+        try put_mark(&out, type_name)
+
+        # The header: the enum without its aliases.
+        var titles = try StrList.create()
+        for member_index in 0..<value.count:
+            let member_name = value.at(member_index).string()
+            if is_enum_alias(member_name):
+                continue
+            try titles.append(try title_casify(member_name))
+        try put_enum(&out, try cat(["Web::CSS::", name_titlecase]), "Enums.h", type_name,
+            underlying_type_for_enum(value.count), &titles)
+        try out.blank()
+
+        # keyword_to_X
+        try put_ported(&out, "Enums.cpp", try cat(["Web::CSS::keyword_to_", name_snakecase]))
+        try out.line(f"pub func keyword_to_{name_snakecase}(keyword: Keyword) -> {type_name}?:")
+        try out.line("    match keyword:")
+        for member_index in 0..<value.count:
+            let member_name = value.at(member_index).string()
+            var valueid_titlecase: str
+            var member_titlecase: str
+            if is_enum_alias(member_name):
+                let parts = strings.split_once(member_name, "=") else trap("an alias without =")
+                valueid_titlecase = try title_casify(parts.0)
+                member_titlecase = try title_casify(parts.1)
+            else:
+                valueid_titlecase = try title_casify(member_name)
+                member_titlecase = valueid_titlecase
+            try out.line(f"        .{try luce_case(valueid_titlecase)}: return {try enum_value(type_name, member_titlecase)}")
+        try out.line("        _: return none")
+        try out.blank()
+
+        # to_keyword
+        try put_ported(&out, "Enums.cpp", try cat(["Web::CSS::to_keyword(", name_titlecase, ")"]))
+        try out.line(f"pub func to_keyword_{suffix}({name_snakecase}_value: {type_name}) -> Keyword:")
+        try out.line(f"    match {name_snakecase}_value:")
+        for member_index in 0..<value.count:
+            let member_name = value.at(member_index).string()
+            if is_enum_alias(member_name):
+                continue
+            let member_titlecase = try title_casify(member_name)
+            try out.line(f"        .{try luce_case(member_titlecase)}: return {try enum_value("Keyword", member_titlecase)}")
+        try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+        try out.blank()
+
+        # to_string
+        try put_ported(&out, "Enums.cpp", try cat(["Web::CSS::to_string(", name_titlecase, ")"]))
+        try out.line(f"pub func to_string_{suffix}(value: {type_name}) -> ak.StringView:")
+        try out.line("    match value:")
+        for member_index in 0..<value.count:
+            let member_name = value.at(member_index).string()
+            if is_enum_alias(member_name):
+                continue
+            let member_titlecase = try title_casify(member_name)
+            try out.line(f"        .{try luce_case(member_titlecase)}: return {try string_view_literal(member_name)}")
+        try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+    return out.text()
+
+# mark: Keyword =================================================================================
+
+## Ported from generate_libweb_css_keyword.py keyword_name: the enumerator of a keyword.
+func keyword_name(dashy_name: str) -> str!:
+    if dashy_name == "-infinity":
+        return "NegativeInfinity"
+    return try title_casify(dashy_name)
+
+## Emit generated_keyword.lucb from Keywords.json.
+func emit_keyword(keyword_data: const Json*) -> str!:
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_keyword", "the CSS keywords",
+        ["Keyword.h", "Keyword.cpp"], "generate_libweb_css_keyword.py", "Keywords.json", no_notes())
+    try out.blank()
+
+    var titles = try StrList.create()
+    try titles.append("Invalid")
+    for index in 0..<keyword_data.count:
+        try titles.append(try keyword_name(keyword_data.at(index).string()))
+    try put_enum(&out, "Web::CSS::Keyword", "Keyword.h", "Keyword", underlying_type_for_enum(keyword_data.count), &titles)
+
+    try put_mark(&out, "Keyword.h")
+    try put_ported(&out, "Keyword.h", "Web::CSS::is_css_wide_keyword")
+    try out.line("# https://www.w3.org/TR/css-values-4/#common-keywords")
+    try out.line("# https://drafts.csswg.org/css-cascade-4/#valdef-all-revert")
+    try out.line("pub func is_css_wide_keyword(name: ak.StringView) -> bool:")
+    try out.line(f"    return ({try equals_ignoring_ascii_case("name", "inherit")}")
+    try out.line(f"        or {try equals_ignoring_ascii_case("name", "initial")}")
+    try out.line(f"        or {try equals_ignoring_ascii_case("name", "revert")}")
+    try out.line(f"        or {try equals_ignoring_ascii_case("name", "revert-layer")}")
+    try out.line(f"        or {try equals_ignoring_ascii_case("name", "unset")})")
+
+    try put_mark(&out, "Keyword.cpp")
+    try out.line("# HashMap<StringView, Keyword, AK::CaseInsensitiveASCIIStringViewTraits> g_stringview_to_keyword_map:")
+    try out.line("# a C++ global built before main, here built on first use (the module var of a static).")
+    try out.line("var g_stringview_to_keyword_map: ak.HashMap[ak.StringView, Keyword, CaseInsensitiveAsciiStringViewTraits]")
+    try out.line("var g_stringview_to_keyword_map_initialized: bool")
+    try out.blank()
+    try out.line("# The keyword table, built on first use in the C heap: it holds views of string literals and")
+    try out.line("# lives as long as the program, as the C++ global does.")
+    try out.line("func stringview_to_keyword_map() -> const ak.HashMap[ak.StringView, Keyword, CaseInsensitiveAsciiStringViewTraits]*:")
+    try out.line("    if g_stringview_to_keyword_map_initialized:")
+    try out.line("        return &g_stringview_to_keyword_map")
+    try out.line("    with memory.heap:")
+    try out.line("        let table = &g_stringview_to_keyword_map")
+    for index in 0..<keyword_data.count:
+        let name = keyword_data.at(index).string()
+        try out.line(f"        discard(ak.hash_map_set(table, {try string_view_literal(name)}, {try enum_value("Keyword", try keyword_name(name))}))")
+    try out.line("    g_stringview_to_keyword_map_initialized = true")
+    try out.line("    return &g_stringview_to_keyword_map")
+    try out.blank()
+    try put_ported(&out, "Keyword.cpp", "Web::CSS::keyword_from_string")
+    try out.line("pub func keyword_from_string(string: ak.StringView) -> Keyword?:")
+    try out.line("    let keyword = ak.hash_map_get_k_const(stringview_to_keyword_map(), string) else return none")
+    try out.line("    return *keyword")
+    try out.blank()
+    try put_ported(&out, "Keyword.cpp", "Web::CSS::string_from_keyword")
+    try out.line("pub func string_from_keyword(keyword: Keyword) -> ak.StringView:")
+    try out.line("    match keyword:")
+    for index in 0..<keyword_data.count:
+        let name = keyword_data.at(index).string()
+        try out.line(f"        .{try luce_case(try keyword_name(name))}: return {try string_view_literal(name)}")
+    try out.line("        _: return ak.sv(\"(invalid CSS::Keyword)\")")
+    return out.text()

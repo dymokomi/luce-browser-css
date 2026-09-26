@@ -1,0 +1,381 @@
+#==============================================================================================
+#
+#   dump_parts - the keyword, input, property, descriptor, small-enum and unit parts
+#
+#   DESCRIPTION:
+#       Each part prints the answers of one group of css_data functions, in the order and
+#       format of the C++ side of the dump.
+#
+#==============================================================================================
+
+## An optional enum value as its integer.
+func opt[E](value: E?, to_int: func(E) -> u64) -> u64?:
+    let present = value else return none
+    return to_int(present)
+
+func keyword_int(keyword: css_data.Keyword) -> u64:
+    return (u64)(u16)keyword
+
+func property_int(property_id: css_data.PropertyId) -> u64:
+    return (u64)(u16)property_id
+
+func environment_variable_int(value: css_data.EnvironmentVariable) -> u64:
+    return (u64)(u8)value
+
+func math_function_int(value: css_data.MathFunction) -> u64:
+    return (u64)(i32)value
+
+func media_feature_int(value: css_data.MediaFeatureId) -> u64:
+    return (u64)(u8)value
+
+func pseudo_class_int(value: css_data.PseudoClass) -> u64:
+    return (u64)(i32)value
+
+func pseudo_element_int(value: css_data.PseudoElement) -> u64:
+    return (u64)(u8)value
+
+func transform_function_int(value: css_data.TransformFunction) -> u64:
+    return (u64)(i32)value
+
+func dimension_int(value: css_data.DimensionType) -> u64:
+    return (u64)(u8)value
+
+func angle_unit_int(value: css_data.AngleUnit) -> u64:
+    return (u64)(u8)value
+
+func flex_unit_int(value: css_data.FlexUnit) -> u64:
+    return (u64)(u8)value
+
+func frequency_unit_int(value: css_data.FrequencyUnit) -> u64:
+    return (u64)(u8)value
+
+func length_unit_int(value: css_data.LengthUnit) -> u64:
+    return (u64)(u8)value
+
+func resolution_unit_int(value: css_data.ResolutionUnit) -> u64:
+    return (u64)(u8)value
+
+func time_unit_int(value: css_data.TimeUnit) -> u64:
+    return (u64)(u8)value
+
+func descriptor_int(value: css_data.DescriptorId) -> u64:
+    return (u64)(u8)value
+
+func logical_property_group_int(value: css_data.LogicalPropertyGroup) -> u64:
+    return (u64)(u8)value
+
+# mark: Keywords and inputs =====================================================================
+
+## Each keyword's name, and the name of the first value past the last keyword.
+func dump_keywords(out: Out*) -> !:
+    for keyword in 0..=keyword_count:
+        try out.p(f"keyword {keyword} ")
+        try out.view(css_data.string_from_keyword((css_data.Keyword)(u16)keyword))
+        try out.p("\n")
+
+## For each line of `inputs`, what every from-string function answers for it.
+func dump_inputs(out: Out*, inputs: const u8[]) -> !:
+    var start: usize = 0
+    while start < inputs.length:
+        var end = start
+        while end < inputs.length and inputs[end] != '\n':
+            end += 1
+        try dump_input(out, ak.string_view_from_bytes(inputs[start..<end]))
+        start = end + 1
+
+func dump_input(out: Out*, s: ak.StringView) -> !:
+    try out.p("in \"")
+    try out.view(s)
+    try out.p("\" kw=")
+    try put_optional(out, opt(css_data.keyword_from_string(s), keyword_int))
+    try out.p(" wide=")
+    try out.b(css_data.is_css_wide_keyword(s))
+    try out.p(" prop=")
+    try put_optional(out, opt(css_data.property_id_from_string(s), property_int))
+    try out.p(" camel=")
+    try put_optional(out, opt(css_data.property_id_from_camel_case_string(s), property_int))
+    try out.p(" env=")
+    try put_optional(out, opt(css_data.environment_variable_from_string(s), environment_variable_int))
+    try out.p(" math=")
+    try put_optional(out, opt(css_data.math_function_from_string(s), math_function_int))
+    try out.p(" mf=")
+    try put_optional(out, opt(css_data.media_feature_id_from_string(s), media_feature_int))
+    try out.p(" pc=")
+    try put_optional(out, opt(css_data.pseudo_class_from_string(s), pseudo_class_int))
+    try out.p(" pe=")
+    try put_optional(out, opt(css_data.pseudo_element_from_string(s), pseudo_element_int))
+    try out.p(" ape=")
+    try put_optional(out, opt(css_data.aliased_pseudo_element_from_string(s), pseudo_element_int))
+    try out.p(" tf=")
+    try put_optional(out, opt(css_data.transform_function_from_string(s), transform_function_int))
+    try out.p(" dim=")
+    try put_optional(out, opt(css_data.dimension_for_unit(s), dimension_int))
+    try out.p(" angle=")
+    try put_optional(out, opt(css_data.string_to_angle_unit(s), angle_unit_int))
+    try out.p(" flex=")
+    try put_optional(out, opt(css_data.string_to_flex_unit(s), flex_unit_int))
+    try out.p(" frequency=")
+    try put_optional(out, opt(css_data.string_to_frequency_unit(s), frequency_unit_int))
+    try out.p(" length=")
+    try put_optional(out, opt(css_data.string_to_length_unit(s), length_unit_int))
+    try out.p(" resolution=")
+    try put_optional(out, opt(css_data.string_to_resolution_unit(s), resolution_unit_int))
+    try out.p(" time=")
+    try put_optional(out, opt(css_data.string_to_time_unit(s), time_unit_int))
+    try out.p(" desc=")
+    for at_rule in 0..<at_rule_count:
+        if at_rule > 0:
+            try out.p(",")
+        try put_optional(out, opt(css_data.descriptor_id_from_string((css_data.AtRuleId)(u8)at_rule, s), descriptor_int))
+    try out.p("\n")
+
+# mark: Properties ==============================================================================
+
+## Every per-property fact, then the computation order, the constants and the logical mappings.
+func dump_properties(out: Out*) -> !:
+    for index in 0..<property_count:
+        try dump_property(out, index, (css_data.PropertyId)(u16)index)
+    try out.p("order")
+    let order = css_data.property_computation_order()
+    try put_property_ids(out, &order)
+    try out.p("\n")
+    try out.p(f"constants {property_int(css_data.first_property_id)} {property_int(css_data.last_property_id)}")
+    try out.p(f" {property_int(css_data.first_inherited_property_id)} {property_int(css_data.last_inherited_property_id)}")
+    try out.p(f" {property_int(css_data.first_longhand_property_id)} {property_int(css_data.last_longhand_property_id)}")
+    try out.p(f" {css_data.number_of_longhand_properties}\n")
+    for id in physical_properties:
+        try out.p(f"unmap {property_int(id)}")
+        for writing_mode in 0..<5:
+            for direction in 0..<2:
+                let context = css_data.LogicalAliasMappingContext(writing_mode = (css_data.WritingMode)(u8)writing_mode,
+                    direction = (css_data.Direction)(u8)direction)
+                try out.p(f" {property_int(css_data.map_physical_property_to_logical_alias(id, context))}")
+        try out.p("\n")
+    for index in 0..<property_count:
+        let id = (css_data.PropertyId)(u16)index
+        if css_data.logical_property_group_for_property(id) == none or css_data.property_is_logical_alias(id):
+            let context = css_data.LogicalAliasMappingContext(writing_mode = .horizontal_tb, direction = .ltr)
+            try out.p(f"unmap-default {index} {property_int(css_data.map_physical_property_to_logical_alias(id, context))}\n")
+
+## ` id id id` for a Vector of PropertyIDs.
+func put_property_ids(out: Out*, ids: const ak.Vector[css_data.PropertyId]*) -> !:
+    for id in ak.vector_span_const(ids):
+        try out.p(f" {property_int(id)}")
+
+func dump_property(out: Out*, index: u64, id: css_data.PropertyId) -> !:
+    try out.p(f"prop {index} name=")
+    try out.fly(css_data.string_from_property_id(id))
+    try out.p(" camel=")
+    try out.fly(css_data.camel_case_string_from_property_id(id))
+    try out.p(" anim=")
+    if css_data.property_is_shorthand(id):
+        try out.p("S")
+    else:
+        try out.p(f"{(i32)css_data.animation_type_from_longhand_property(id)}")
+    try out.p(" animatable=")
+    try out.b(css_data.is_animatable_property(id))
+    try out.p(" inherited=")
+    try out.b(css_data.is_inherited_property(id))
+    try out.p(" layout=")
+    try out.b(css_data.property_affects_layout(id))
+    try out.p(" stacking=")
+    try out.b(css_data.property_affects_stacking_context(id))
+    try out.p(" gcs=")
+    try out.b(css_data.property_needs_layout_for_getcomputedstyle(id))
+    try out.p(" node=")
+    try out.b(css_data.property_needs_layout_node_for_resolved_value(id))
+    try out.p(f" mult={(i32)css_data.property_multiplicity(id)} single=")
+    try out.b(css_data.property_is_single_valued(id))
+    try out.p(" list=")
+    try out.b(css_data.property_is_list_valued(id))
+    try out.p(" quirks=")
+    try out.b(css_data.property_has_quirk(id, .hashless_hex_color))
+    try out.b(css_data.property_has_quirk(id, .unitless_length))
+    try out.p(f" max={css_data.property_maximum_value_count(id)} shorthand=")
+    try out.b(css_data.property_is_shorthand(id))
+    try out.p(" maps=")
+    try out.b(css_data.property_maps_to_shorthand(id))
+    try out.p(" positional=")
+    try out.b(css_data.property_is_positional_value_list_shorthand(id))
+    try out.p(" req=")
+    try out.b(css_data.property_requires_computation_with_inherited_value(id))
+    try out.b(css_data.property_requires_computation_with_initial_value(id))
+    try out.b(css_data.property_requires_computation_with_cascaded_value(id))
+    try out.p(" logical=")
+    try out.b(css_data.property_is_logical_alias(id))
+    try out.p(" group=")
+    try put_optional(out, opt(css_data.logical_property_group_for_property(id), logical_property_group_int))
+    try out.p("\n")
+
+    try out.p(f"prop {index} keywords")
+    for keyword in 0..<keyword_count:
+        if css_data.property_accepts_keyword(id, (css_data.Keyword)(u16)keyword):
+            try out.p(f" {keyword}")
+    try out.p("\n")
+    try out.p(f"prop {index} legacy")
+    for keyword in 0..<keyword_count:
+        if let resolved = css_data.resolve_legacy_value_alias(id, (css_data.Keyword)(u16)keyword):
+            try out.p(f" {keyword}={keyword_int(resolved)}")
+    try out.p("\n")
+    try out.p(f"prop {index} blacklist")
+    let blacklist = css_data.property_custom_ident_blacklist(id)
+    for entry in ak.vector_span_const(&blacklist):
+        try out.p(" ")
+        try out.view(entry)
+    try out.p("\n")
+    try out.p(f"prop {index} int ")
+    let integers: i64[9] = [-1000000, -1, 0, 1, 2, 999, 1000, 1001, 1000000]
+    for value in integers:
+        try out.b(css_data.property_accepts_integer(id, value))
+    try out.p("\n")
+    try out.p(f"prop {index} num ")
+    let numbers: f64[11] = [-1000000000.0, -1.5, -1.0, -0.0, 0.0, 0.5, 1.0, 999.5, 1000.0, 1000.5, 1000000000.0]
+    for value in numbers:
+        try out.b(css_data.property_accepts_number(id, value))
+    try out.p("\n")
+    try out.p(f"prop {index} longhands")
+    let longhands = css_data.longhands_for_shorthand(id)
+    try put_property_ids(out, &longhands)
+    try out.p("\n")
+    try out.p(f"prop {index} expanded")
+    let expanded = css_data.expanded_longhands_for_shorthand(id)
+    try put_property_ids(out, &expanded)
+    try out.p("\n")
+    try out.p(f"prop {index} shorthands")
+    let shorthands = css_data.shorthands_for_longhand(id)
+    try put_property_ids(out, &shorthands)
+    try out.p("\n")
+    try out.p(f"prop {index} map")
+    for writing_mode in 0..<5:
+        for direction in 0..<2:
+            let context = css_data.LogicalAliasMappingContext(writing_mode = (css_data.WritingMode)(u8)writing_mode,
+                direction = (css_data.Direction)(u8)direction)
+            try out.p(f" {property_int(css_data.map_logical_alias_to_physical_property(id, context))}")
+    try out.p("\n")
+
+# mark: Descriptors =============================================================================
+
+## The at-rule and descriptor names, which at-rule supports which descriptor, and the metadata
+## of each supported pair.
+func dump_descriptors(out: Out*) -> !:
+    for at_rule in 0..<at_rule_count:
+        try out.p(f"atrule {at_rule} ")
+        try out.fly(css_data.to_string_at_rule_id((css_data.AtRuleId)(u8)at_rule))
+        try out.p("\n")
+    for descriptor in 0..<descriptor_count:
+        try out.p(f"desc {descriptor} ")
+        try out.fly(css_data.to_string_descriptor_id((css_data.DescriptorId)(u8)descriptor))
+        try out.p("\n")
+    for at_rule in 0..<at_rule_count:
+        for descriptor in 0..=descriptor_count:
+            let at_rule_id = (css_data.AtRuleId)(u8)at_rule
+            let descriptor_id = (css_data.DescriptorId)(u8)descriptor
+            let supported = css_data.at_rule_supports_descriptor(at_rule_id, descriptor_id)
+            try out.p(f"supports {at_rule} {descriptor} ")
+            try out.b(supported)
+            if supported:
+                let metadata = css_data.get_descriptor_metadata(at_rule_id, descriptor_id)
+                try out.p(" ")
+                try out.b(metadata.allow_arbitrary_substitution_functions)
+                for entry in ak.vector_span_const(&metadata.syntax):
+                    match entry:
+                        .keyword(value): try out.p(f" K{keyword_int(value)}")
+                        .property_id(value): try out.p(f" P{property_int(value)}")
+                        .descriptor_metadata_value_type(value): try out.p(f" V{(i32)value}")
+            try out.p("\n")
+
+# mark: Environment variables, media features, pseudo-classes and -elements, transforms ========
+
+func dump_small(out: Out*) -> !:
+    for index in 0..<environment_variable_count:
+        let variable = (css_data.EnvironmentVariable)(u8)index
+        try out.p(f"env {index} ")
+        try out.view(css_data.to_string_environment_variable(variable))
+        try out.p(f" {css_data.environment_variable_dimension_count(variable)}\n")
+
+    for index in 0..<media_feature_count:
+        let feature = (css_data.MediaFeatureId)(u8)index
+        try out.p(f"mf {index} ")
+        try out.view(css_data.string_from_media_feature_id(feature))
+        try out.p(" range=")
+        try out.b(css_data.media_feature_type_is_range(feature))
+        try out.p(" types=")
+        for value_type in 0..<5:
+            try out.b(css_data.media_feature_accepts_type(feature, (css_data.MediaFeatureValueType)(i32)value_type))
+        try out.p(" kws")
+        for keyword in 0..<keyword_count:
+            if css_data.media_feature_accepts_keyword(feature, (css_data.Keyword)(u16)keyword):
+                try out.p(f" {keyword}")
+        try out.p(" falsey")
+        for keyword in 0..<keyword_count:
+            if css_data.media_feature_keyword_is_falsey(feature, (css_data.Keyword)(u16)keyword):
+                try out.p(f" {keyword}")
+        try out.p("\n")
+
+    for index in 0..<pseudo_class_count:
+        let pseudo_class = (css_data.PseudoClass)(i32)index
+        let metadata = css_data.pseudo_class_metadata(pseudo_class)
+        try out.p(f"pc {index} ")
+        try out.view(css_data.pseudo_class_name(pseudo_class))
+        try out.p(f" {(i32)metadata.parameter_type}")
+        try out.b(metadata.is_valid_as_function)
+        try out.b(metadata.is_valid_as_identifier)
+        try out.p("\n")
+
+    for index in 0..=pseudo_element_count + 1:
+        let pseudo_element = (css_data.PseudoElement)(u8)index
+        try out.p(f"pe {index} ")
+        if index < pseudo_element_count:
+            try out.view(css_data.pseudo_element_name(pseudo_element))
+        else:
+            try out.p("-")
+        try out.p(" has=")
+        try out.b(css_data.is_has_allowed_pseudo_element(pseudo_element))
+        try out.p(" tree=")
+        try out.b(css_data.is_tree_abiding_pseudo_element(pseudo_element))
+        try out.p(" backed=")
+        try out.b(css_data.is_element_backed_pseudo_element(pseudo_element))
+        try out.p(" root=")
+        try out.b(css_data.is_pseudo_element_root(pseudo_element))
+        if index != pseudo_element_count:
+            let metadata = css_data.pseudo_element_metadata(pseudo_element)
+            try out.p(f" meta={(i32)metadata.parameter_type}")
+            try out.b(metadata.is_valid_as_function)
+            try out.b(metadata.is_valid_as_identifier)
+        try out.p(" unsupported")
+        for property in 0..<property_count:
+            if not css_data.pseudo_element_supports_property(pseudo_element, (css_data.PropertyId)(u16)property):
+                try out.p(f" {property}")
+        try out.p("\n")
+
+    for index in 0..<transform_function_count:
+        let function = (css_data.TransformFunction)(i32)index
+        try out.p(f"tf {index} ")
+        try out.view(css_data.to_string_transform_function(function))
+        let metadata = css_data.transform_function_metadata(function)
+        for parameter in ak.vector_span_const(&metadata.parameters):
+            try out.p(f" {(i32)parameter.type_}")
+            try out.b(parameter.required)
+        try out.p("\n")
+
+# mark: Units ===================================================================================
+
+## For one dimension with `count` units: the canonical unit, each unit's name, and each pair's
+## compatibility, with the ratio of compatible (and equal) units.
+func dump_unit[E](out: Out*, name: str, count: u64, from_int: func(u64) -> E, to_int: func(E) -> u64,
+        canonical: func() -> E, to_string: func(E) -> ak.FlyString, compatible: func(E, E) -> bool,
+        ratio: func(E, E) -> f64) -> !:
+    try out.p(f"canonical {name} {to_int(canonical())}\n")
+    for value in 0..<count:
+        try out.p(f"unit {name} {value} ")
+        try out.fly(to_string(from_int(value)))
+        try out.p("\n")
+    for a in 0..<count:
+        for b in 0..<count:
+            let is_compatible = compatible(from_int(a), from_int(b))
+            try out.p(f"compat {name} {a} {b} ")
+            try out.b(is_compatible)
+            if is_compatible or a == b:
+                var buffer: u8[64]
+                try out.p(f" {try strings.format_f64(ratio(from_int(a), from_int(b)), buffer)}")
+            try out.p("\n")

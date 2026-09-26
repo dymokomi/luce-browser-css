@@ -1,0 +1,258 @@
+#==============================================================================================
+#
+#   emit_property_id_values - generated_property_id_2: multiplicity, quirks, keywords and ranges
+#
+#   DESCRIPTION:
+#       Continues emit_property_id's port of Meta/Generators/generate_libweb_css_property_id.py: the
+#       functions of the second PropertyID fragment.
+#
+#==============================================================================================
+
+# mark: generated_property_id_2: multiplicity, quirks, keywords, ranges ==========================
+
+## The multiplicity of a property if it is not "single", checked as the Python checks it.
+func property_multiplicity_of(value: const Json*) -> str?:
+    let multiplicity = value.get("multiplicity") else return none
+    let text = multiplicity.string()
+    if text == "single":
+        return none
+    if not (text == "list" or text == "coordinating-list"):
+        trap(f"'{text}' is not a valid value for 'multiplicity'. Accepted values are: 'single', 'list', 'coordinating-list'")
+    return text
+
+func emit_property_id_2(data: PropertyData*) -> str!:
+    let properties = data.properties
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_property_id_2", "the CSS properties: values",
+        ["PropertyID.cpp"], "generate_libweb_css_property_id.py",
+        "Properties.json, Enums.json and LogicalPropertyGroups.json",
+        ["Multiplicity, quirks, accepted keywords and the integer and number ranges; continued from",
+            "generated_property_id."])
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_multiplicity")
+    try out.line("pub func property_multiplicity(property_id: PropertyId) -> PropertyMultiplicity:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let multiplicity = property_multiplicity_of(properties.at(index)) else continue
+        try out.line(f"        {try property_case(name)}: return {try enum_value("PropertyMultiplicity", try title_casify(multiplicity))}")
+    try out.line("        _: return PropertyMultiplicity.single")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_is_single_valued")
+    try out.line("pub func property_is_single_valued(property_id: PropertyId) -> bool:")
+    try out.line("    return not property_is_list_valued(property_id)")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_is_list_valued")
+    try out.line("pub func property_is_list_valued(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        if property_multiplicity_of(properties.at(index)) == none:
+            continue
+        try out.line(f"        {try property_case(name)}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_has_quirk")
+    try out.line("pub func property_has_quirk(property_id: PropertyId, quirk: Quirk) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let quirks = value.get("quirks") else continue
+        if not quirks.truthy():
+            continue
+        try out.line(f"        {try property_case(properties.key(index))}:")
+        try out.line("            match quirk:")
+        for quirk_index in 0..<quirks.count:
+            try out.line(f"                .{try luce_case(try title_casify(quirks.at(quirk_index).string()))}: return true")
+        try out.line("                _: return false")
+    try out.line("        _: return false")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_accepts_keyword")
+    try out.line("pub func property_accepts_keyword(property_id: PropertyId, keyword: Keyword) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        try out.line(f"        {try property_case(properties.key(index))}:")
+        # The enum types among the valid types: a keyword of one of those is accepted too.
+        var enum_checks = try StrList.create()
+        if let valid_types = value.get("valid-types"):
+            for type_index in 0..<valid_types.count:
+                let valid_type = valid_types.at(type_index).string()
+                var type_name = valid_type
+                if let parts = strings.split_once(valid_type, " "):
+                    type_name = parts.0
+                if not data.enum_names.contains(type_name):
+                    continue
+                try enum_checks.append(try cat(["keyword_to_", try snake_casify(type_name), "(keyword) != none"]))
+        var indent = "            "
+        var valid_identifiers: const Json*? = none
+        if let identifiers = value.get("valid-identifiers"):
+            if identifiers.truthy():
+                valid_identifiers = identifiers
+        if let identifiers = valid_identifiers:
+            try out.line("            match keyword:")
+            for keyword_index in 0..<identifiers.count:
+                let keyword_string = identifiers.at(keyword_index).string()
+                var keyword_titlecase: str
+                if let parts = strings.split_once(keyword_string, ">"):
+                    keyword_titlecase = try title_casify(parts.0)
+                else:
+                    keyword_titlecase = try title_casify(keyword_string)
+                try out.line(f"                .{try luce_case(keyword_titlecase)}: return true")
+            # C++: `default: break;` then the enum checks below the switch.
+            try out.line("                _:")
+            indent = "                    "
+        for check_index in 0..<enum_checks.count:
+            try out.line(f"{indent}if {enum_checks.at(check_index)}:")
+            try out.line(f"{indent}    return true")
+        try out.line(f"{indent}return false")
+    try out.line("        _: return false")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::resolve_legacy_value_alias")
+    try out.line("pub func resolve_legacy_value_alias(property_id: PropertyId, keyword: Keyword) -> Keyword?:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let valid_identifiers = value.get("valid-identifiers") else continue
+        if not valid_identifiers.truthy():
+            continue
+        var has_any_legacy_value_aliases = false
+        for keyword_index in 0..<valid_identifiers.count:
+            if contains(valid_identifiers.at(keyword_index).string(), ">"):
+                has_any_legacy_value_aliases = true
+        if not has_any_legacy_value_aliases:
+            continue
+        try out.line(f"        {try property_case(properties.key(index))}:")
+        try out.line("            match keyword:")
+        for keyword_index in 0..<valid_identifiers.count:
+            let keyword_string = valid_identifiers.at(keyword_index).string()
+            let parts = strings.split_once(keyword_string, ">") else continue
+            try out.line(f"                .{try luce_case(try title_casify(parts.0))}: return {try enum_value("Keyword", try title_casify(parts.1))}")
+        # C++: `default: break;` and `break;`: the `return {}` after the switch.
+        try out.line("                _: return none")
+    try out.line("        _: return none")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_custom_ident_blacklist")
+    try out.line("pub func property_custom_ident_blacklist(property_id: PropertyId) -> ak.Vector[ak.StringView]:")
+    try out.line("    var blacklist: ak.Vector[ak.StringView]")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let valid_types = value.get("valid-types") else continue
+        for type_index in 0..<valid_types.count:
+            let valid_type = valid_types.at(type_index).string()
+            let parts = strings.split_once(valid_type, " ") else continue
+            if parts.0 != "custom-ident":
+                continue
+            let parameters_string = parts.1
+            if contains(parameters_string, " "):
+                trap(f"Bad custom-ident parameters: {valid_type}")
+            if not (starts_with(parameters_string, "![") and ends_with(parameters_string, "]")):
+                trap(f"Bad custom-ident parameters: {parameters_string}")
+            let keywords = slice(parameters_string, 2, parameters_string.length - 1)
+            try out.line(f"        {try property_case(properties.key(index))}:")
+            var list = try strings.Builder.create()
+            var keyword_parts = try strings.SplitIterator.over(keywords, ",")
+            var first = true
+            while let keyword = keyword_parts.next():
+                if not first:
+                    try list.put(", ")
+                try list.put(try string_view_literal(keyword))
+                first = false
+            try out.line(f"            ak.vector_construct_opaque(&blacklist, [{list.view()}])")
+            try out.line("            return blacklist")
+    try out.line("        _: return blacklist")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_maximum_value_count")
+    try out.line("pub func property_maximum_value_count(property_id: PropertyId) -> usize:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let max_values = value.get("max-values") else continue
+        try out.line(f"        {try property_case(properties.key(index))}: return {max_values.text}")
+    try out.line("        _: return 1")
+    try out.blank()
+
+    try generate_bounds_checking_function(&out, properties, "integer", "i64")
+    try generate_bounds_checking_function(&out, properties, "number", "f64")
+    return out.text()
+
+## Ported from generate_libweb_css_property_id.py generate_bounds_checking_function, for the two
+## value types whose C++ types css_data has: `integer` (i64) and `number` (double).
+func generate_bounds_checking_function(out: Out*, properties: const Json*, css_type_name: str, type_name: str) -> !:
+    try put_ported(out, "PropertyID.cpp", try cat(["Web::CSS::property_accepts_", css_type_name]))
+    try out.line(f"pub func property_accepts_{css_type_name}(property_id: PropertyId, value: {type_name}) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let valid_types = value.get("valid-types") else continue
+        if not valid_types.truthy():
+            continue
+        for type_index in 0..<valid_types.count:
+            let valid_type = valid_types.at(type_index).string()
+            var type_word = valid_type
+            var range: str? = none
+            if let parts = strings.split_once(valid_type, " "):
+                type_word = parts.0
+                range = parts.1
+            if type_word != css_type_name:
+                continue
+            let case_text = try property_case(properties.key(index))
+            if range == none:
+                try out.line(f"        {case_text}: return true")
+                break
+            let range_str = range else trap("unreachable")
+            if not (starts_with(range_str, "[") and ends_with(range_str, "]") and contains(range_str, ",")):
+                trap(f"Bad range: {range_str}")
+            let limits = strings.split_once(slice(range_str, 1, range_str.length - 1), ",") else trap("Bad range")
+            var min_value_string = limits.0
+            var max_value_string = limits.1
+            if min_value_string == "-∞":
+                min_value_string = ""
+            if max_value_string == "∞":
+                max_value_string = ""
+            if min_value_string.length == 0 and max_value_string.length == 0:
+                try out.line(f"        {case_text}: return true")
+                break
+            var condition = try strings.Builder.create()
+            if min_value_string.length > 0:
+                try condition.put("value >= ")
+                try condition.put(try bound_literal(min_value_string, type_name))
+            if max_value_string.length > 0:
+                if min_value_string.length > 0:
+                    try condition.put(" and ")
+                try condition.put("value <= ")
+                try condition.put(try bound_literal(max_value_string, type_name))
+            try out.line(f"        {case_text}: return {condition.view()}")
+            break
+    try out.line("        _: return false")
+    try out.blank()
+
+## A range bound of Properties.json as a literal of `type_name`: the C++ compares a double with
+## the integer literal, which Luce spells as a float literal.
+func bound_literal(text: str, type_name: str) -> str!:
+    if type_name == "f64" and not contains(text, "."):
+        return try cat([text, ".0"])
+    if type_name == "i64" and contains(text, "."):
+        trap(f"a non-integer bound {text} of an integer range")
+    return text

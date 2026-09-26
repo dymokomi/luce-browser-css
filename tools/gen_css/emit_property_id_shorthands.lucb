@@ -1,0 +1,456 @@
+#==============================================================================================
+#
+#   emit_property_id_shorthands - generated_property_id_3: shorthands, computation order, logical properties
+#
+#   DESCRIPTION:
+#       Continues emit_property_id's port of Meta/Generators/generate_libweb_css_property_id.py: the
+#       functions of the third PropertyID fragment.
+#
+#==============================================================================================
+
+# mark: generated_property_id_3: shorthands, computation, logical properties =====================
+
+## Ported from generate_libweb_css_property_id.py's get_longhands.
+func get_longhands(properties: const Json*, property_id: str) -> const Json*:
+    let property = properties.get(property_id) else trap(f"no property '{property_id}'")
+    return property.get("longhands") else trap(f"'{property_id}' has no longhands")
+
+## Ported from generate_libweb_css_property_id.py's get_expanded_longhands.
+func get_expanded_longhands(properties: const Json*, property_id: str, expanded: StrList*) -> !:
+    let longhands = get_longhands(properties, property_id)
+    for index in 0..<longhands.count:
+        let longhand_id = longhands.at(index).string()
+        let property = properties.get(longhand_id) else trap(f"no property '{longhand_id}'")
+        if property.has("longhands"):
+            try get_expanded_longhands(properties, longhand_id, expanded)
+        else:
+            try expanded.append(longhand_id)
+
+## `ak.vector_construct_opaque`'s list of the PropertyIDs of `names`, one per line.
+func put_property_id_list(out: Out*, names: const StrList*, indent: str) -> !:
+    for index in 0..<names.count:
+        try out.line(f"{indent}{try property_id_value(names.at(index))},")
+
+## get_shorthands_for_longhand's sort key, as a comparison: more expanded longhands first;
+## then names without a leading `-`; then `-webkit-` before other `-` names; then by name.
+func shorthand_before(properties: const Json*, a: str, b: str) -> bool!:
+    var a_longhands = try StrList.create()
+    try get_expanded_longhands(properties, a, &a_longhands)
+    var b_longhands = try StrList.create()
+    try get_expanded_longhands(properties, b, &b_longhands)
+    if a_longhands.count != b_longhands.count:
+        return a_longhands.count > b_longhands.count
+    let a_dash = starts_with(a, "-")
+    let b_dash = starts_with(b, "-")
+    if a_dash != b_dash:
+        return not a_dash
+    let a_webkit = starts_with(a, "-webkit-")
+    let b_webkit = starts_with(b, "-webkit-")
+    if a_webkit != b_webkit:
+        return a_webkit
+    return string_less(a, b)
+
+## Ported from generate_libweb_css_property_id.py's get_shorthands_for_longhand: the shorthands
+## that contain `longhand`, directly or through other shorthands, in the CSSOM's preferred
+## order.
+func get_shorthands_for_longhand(properties: const Json*, map: StrListMap*, longhand: str) -> StrList!:
+    var shorthands = try StrList.create()
+    if let immediates = map.get(longhand):
+        for index in 0..<immediates.count:
+            let immediate = immediates.at(index)
+            try shorthands.append(immediate)
+            if map.get(immediate) != none:
+                let nested = try get_shorthands_for_longhand(properties, map, immediate)
+                for nested_index in 0..<nested.count:
+                    try shorthands.append(nested.at(nested_index))
+
+    # https://www.w3.org/TR/cssom/#concept-shorthands-preferred-order
+    # Combined sort key:
+    # 4. Number of longhand properties (greatest first)
+    # 2. Items starting with "-" last
+    # 3. Items starting with "-webkit-" before other "-" items
+    # 1. Lexicographic
+    # Insertion sort: stable, as Python's sort is.
+    for index in 1..<shorthands.count:
+        let value = shorthands.items[index]
+        var position = index
+        while position > 0 and try shorthand_before(properties, value, shorthands.items[position - 1]):
+            shorthands.items[position] = shorthands.items[position - 1]
+            position -= 1
+        shorthands.items[position] = value
+    return shorthands
+
+## The C++ `manually_specified_computation_order` of generate_libweb_css_property_id.py.
+let manually_specified_computation_order: str[23] = [
+    # math-depth is required to compute font-size
+    "MathDepth",
+    # Font properties are required to absolutize font-relative units used in other properties, including line-height.
+    "FontFamily",
+    "FontFeatureSettings",
+    "FontKerning",
+    "FontOpticalSizing",
+    "FontSize",
+    "FontStyle",
+    "FontVariantAlternates",
+    "FontVariantCaps",
+    "FontVariantEastAsian",
+    "FontVariantEmoji",
+    "FontVariantLigatures",
+    "FontVariantNumeric",
+    "FontVariantPosition",
+    "FontVariationSettings",
+    "FontWeight",
+    "FontWidth",
+    "TextRendering",
+    # line-height is required to absolutize `lh` units used in other properties.
+    "LineHeight",
+    # color-scheme is included in the generic computation context in order to compute light-dark() color functions
+    "ColorScheme",
+    # background-image is required to compute the other background-* properties
+    "BackgroundImage",
+    # text direction and writing mode properties are required to map logical properties to their physical counterparts
+    "Direction",
+    "WritingMode",
+]
+
+func emit_property_id_3(data: PropertyData*) -> str!:
+    let properties = data.properties
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_property_id_3", "the CSS properties: shorthands and logical properties",
+        ["PropertyID.cpp"], "generate_libweb_css_property_id.py",
+        "Properties.json, Enums.json and LogicalPropertyGroups.json",
+        ["Shorthands and their longhands, the computation order and the logical property mappings;",
+            "continued from generated_property_id_2. The `static Vector<PropertyID>`s are built on first",
+            "use in the C heap."])
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_is_shorthand")
+    try out.line("pub func property_is_shorthand(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    var shorthand_count: usize = 0
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        if value.has("longhands"):
+            try out.line(f"        {try property_case(properties.key(index))}: return true")
+            shorthand_count += 1
+    try out.line("        _: return false")
+
+    for expanded in [false, true]:
+        let function_name = "expanded_longhands_for_shorthand" if expanded else "longhands_for_shorthand"
+        try out.blank()
+        try out.line(f"# The `static Vector<PropertyID> longhands` of {function_name}, one per case.")
+        try out.line(f"var {function_name}_longhands: StaticPropertyIds[{shorthand_count}]")
+        try out.blank()
+        try put_ported(&out, "PropertyID.cpp", try cat(["Web::CSS::", function_name]))
+        try out.line(f"pub func {function_name}(property_id: PropertyId) -> ak.Vector[PropertyId]:")
+        try out.line("    match property_id:")
+        var slot: usize = 0
+        for index in 0..<properties.count:
+            let name = properties.key(index)
+            let value = properties.at(index)
+            if is_legacy_alias(value) or not value.has("longhands"):
+                continue
+            var longhands = try StrList.create()
+            if expanded:
+                try get_expanded_longhands(properties, name, &longhands)
+            else:
+                let list = get_longhands(properties, name)
+                for longhand_index in 0..<list.count:
+                    try longhands.append(list.at(longhand_index).string())
+            try out.line(f"        {try property_case(name)}:")
+            try out.line(f"            return static_property_ids(&{function_name}_longhands[{slot}], [")
+            try put_property_id_list(&out, &longhands, "                ")
+            try out.line("            ])")
+            slot += 1
+        try out.line("        _: return empty_property_ids()")
+
+    # shorthands_for_longhand_map: for each longhand, which shorthand(s) contain it.
+    var shorthands_for_longhand_map = try StrListMap.create()
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let longhands = value.get("longhands") else continue
+        for longhand_index in 0..<longhands.count:
+            let list = try shorthands_for_longhand_map.list(longhands.at(longhand_index).string())
+            try list.append(name)
+
+    try out.blank()
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_maps_to_shorthand")
+    try out.line("pub func property_maps_to_shorthand(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<shorthands_for_longhand_map.keys.count:
+        try out.line(f"        {try property_case(shorthands_for_longhand_map.keys.at(index))}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+
+    try out.line("# The `static Vector<PropertyID> shorthands` of shorthands_for_longhand, one per case.")
+    try out.line(f"var shorthands_for_longhand_shorthands: StaticPropertyIds[{shorthands_for_longhand_map.keys.count}]")
+    try out.blank()
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::shorthands_for_longhand")
+    try out.line("pub func shorthands_for_longhand(property_id: PropertyId) -> ak.Vector[PropertyId]:")
+    try out.line("    match property_id:")
+    for index in 0..<shorthands_for_longhand_map.keys.count:
+        let longhand = shorthands_for_longhand_map.keys.at(index)
+        let shorthands = try get_shorthands_for_longhand(properties, &shorthands_for_longhand_map, longhand)
+        try out.line(f"        {try property_case(longhand)}:")
+        try out.line(f"            return static_property_ids(&shorthands_for_longhand_shorthands[{index}], [")
+        try put_property_id_list(&out, &shorthands, "                ")
+        try out.line("            ])")
+    try out.line("        _: return empty_property_ids()")
+    try out.blank()
+
+    try out.line("# The `static Vector<PropertyID> order` of property_computation_order.")
+    try out.line("var property_computation_order_order: StaticPropertyIds")
+    try out.blank()
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_computation_order")
+    try out.line("pub func property_computation_order() -> ak.Vector[PropertyId]:")
+    try out.line("    return static_property_ids(&property_computation_order_order, [")
+    for property_name in manually_specified_computation_order:
+        try out.line(f"        {try enum_value("PropertyId", property_name)},")
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let value = properties.at(index)
+        if is_legacy_alias(value) or value.has("longhands"):
+            continue
+        let title = try title_casify(name)
+        var manual = false
+        for property_name in manually_specified_computation_order:
+            if property_name == title:
+                manual = true
+        if manual:
+            continue
+        try out.line(f"        {try enum_value("PropertyId", title)},")
+    try out.line("    ])")
+    try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_is_positional_value_list_shorthand")
+    try out.line("pub func property_is_positional_value_list_shorthand(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        if value.has("positional-value-list-shorthand"):
+            try out.line(f"        {try property_case(properties.key(index))}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+
+    var properties_requiring_inherited = try StrList.create()
+    var properties_requiring_initial = try StrList.create()
+    var properties_requiring_cascaded = try StrList.create()
+    for index in 0..<properties.count:
+        let name = properties.key(index)
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let requires_computation = value.get("requires-computation")
+        if requires_computation != none and value.has("longhands"):
+            trap(f"Property '{name}' is a shorthand and cannot have 'requires-computation' set.")
+        if value.has("longhands"):
+            continue
+        let requirement = requires_computation else trap(f"Property '{name}' is missing 'requires-computation' field.")
+        let text = requirement.string()
+        if text == "always":
+            try properties_requiring_inherited.append(name)
+            try properties_requiring_initial.append(name)
+            try properties_requiring_cascaded.append(name)
+        elif text == "non-inherited-value":
+            try properties_requiring_initial.append(name)
+            try properties_requiring_cascaded.append(name)
+        elif text == "cascaded-value":
+            try properties_requiring_cascaded.append(name)
+        elif text != "never":
+            trap(f"Property '{name}' has unrecognized 'requires-computation' value '{text}'")
+    for which in [("inherited", &properties_requiring_inherited), ("initial", &properties_requiring_initial),
+            ("cascaded", &properties_requiring_cascaded)]:
+        try put_ported(&out, "PropertyID.cpp", try cat(["Web::CSS::property_requires_computation_with_", which.0, "_value"]))
+        try out.line(f"pub func property_requires_computation_with_{which.0}_value(property_id: PropertyId) -> bool:")
+        try out.line("    match property_id:")
+        for index in 0..<which.1.count:
+            try out.line(f"        {try property_case(which.1.at(index))}: return true")
+        try out.line("        _: return false")
+        try out.blank()
+
+    try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_is_logical_alias")
+    try out.line("pub func property_is_logical_alias(property_id: PropertyId) -> bool:")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        if value.has("logical-alias-for"):
+            try out.line(f"        {try property_case(properties.key(index))}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+
+    try emit_map_logical_alias_to_physical_property(&out, data)
+    try emit_map_physical_property_to_logical_alias(&out, data)
+    try emit_logical_property_group_for_property(&out, data)
+    return out.text()
+
+# mark: Logical properties ======================================================================
+
+## The physical property `entry_name` of a logical property group, as `PropertyId.x`
+## (generate_libweb_css_property_id.py's mapped_property).
+func mapped_property(group: const Json*, group_name: str, property_name: str, entry_name: str) -> str!:
+    let physical = group.get("physical") else trap(f"Logical property group '{group_name}' has no physical properties")
+    let entry = physical.get(entry_name) else trap(f"Logical property group '{group_name}' is missing entry for '{entry_name}', requested by property '{property_name}'.")
+    return try property_id_value(entry.string())
+
+func emit_map_logical_alias_to_physical_property(out: Out*, data: PropertyData*) -> !:
+    let properties = data.properties
+    let horizontal_tb = "mapping_context.writing_mode == WritingMode.horizontal_tb"
+    let vertical_rl_or_sideways_rl = "mapping_context.writing_mode == WritingMode.vertical_rl or mapping_context.writing_mode == WritingMode.sideways_rl"
+    let vertical_rl_sideways_rl_or_vertical_lr = "mapping_context.writing_mode == WritingMode.vertical_rl or mapping_context.writing_mode == WritingMode.sideways_rl or mapping_context.writing_mode == WritingMode.vertical_lr"
+    let ltr = "used_direction == Direction.ltr"
+
+    try put_ported(out, "PropertyID.cpp", "Web::CSS::map_logical_alias_to_physical_property")
+    try out.line("pub func map_logical_alias_to_physical_property(property_id: PropertyId, mapping_context: LogicalAliasMappingContext) -> PropertyId:")
+    try out.line("    # https://drafts.csswg.org/css-writing-modes-4/#logical-to-physical")
+    try out.line("    # FIXME: Note: The used direction depends on the computed writing-mode and text-orientation: in vertical writing")
+    try out.line("    #              modes, a text-orientation value of upright forces the used direction to ltr.")
+    try out.line("    let used_direction = mapping_context.direction")
+    try out.line("    match property_id:")
+    for index in 0..<properties.count:
+        let property_name = properties.key(index)
+        let value = properties.at(index)
+        if is_legacy_alias(value):
+            continue
+        let logical_alias_for = value.get("logical-alias-for") else continue
+        let group_value = logical_alias_for.get("group")
+        let mapping_value = logical_alias_for.get("mapping")
+        if group_value == none or mapping_value == none:
+            trap(f"Logical alias '{property_name}' is missing either its group or its mapping!")
+        let group_name = (group_value else trap("unreachable")).string()
+        let mapping = (mapping_value else trap("unreachable")).string()
+        let group = data.logical_property_groups.get(group_name) else trap(f"Logical alias '{property_name}' has unrecognized group '{group_name}'")
+
+        try out.line(f"        {try property_case(property_name)}:")
+        if mapping == "block-end":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "bottom")}")
+            try out.line(f"            if {vertical_rl_or_sideways_rl}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "left")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "right")}")
+        elif mapping == "block-size":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "height")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "width")}")
+        elif mapping == "block-start":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "top")}")
+            try out.line(f"            if {vertical_rl_or_sideways_rl}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "right")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "left")}")
+        elif mapping == "end-end":
+            try emit_corner_mapping(out, group, group_name, property_name, ["bottom-right", "bottom-left", "bottom-left", "top-left", "bottom-right", "top-right", "top-right", "bottom-right"])
+        elif mapping == "end-start":
+            try emit_corner_mapping(out, group, group_name, property_name, ["bottom-left", "bottom-right", "top-left", "bottom-left", "top-right", "bottom-right", "bottom-right", "top-right"])
+        elif mapping == "inline-end":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                if {ltr}:")
+            try out.line(f"                    return {try mapped_property(group, group_name, property_name, "right")}")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "left")}")
+            try out.blank()
+            try out.line(f"            if {vertical_rl_sideways_rl_or_vertical_lr}:")
+            try out.line(f"                if {ltr}:")
+            try out.line(f"                    return {try mapped_property(group, group_name, property_name, "bottom")}")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "top")}")
+            try out.blank()
+            try out.line(f"            if {ltr}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "top")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "bottom")}")
+        elif mapping == "inline-size":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "width")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "height")}")
+        elif mapping == "inline-start":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                if {ltr}:")
+            try out.line(f"                    return {try mapped_property(group, group_name, property_name, "left")}")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "right")}")
+            try out.blank()
+            try out.line(f"            if {vertical_rl_sideways_rl_or_vertical_lr}:")
+            try out.line(f"                if {ltr}:")
+            try out.line(f"                    return {try mapped_property(group, group_name, property_name, "top")}")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "bottom")}")
+            try out.blank()
+            try out.line(f"            if {ltr}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "bottom")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "top")}")
+        elif mapping == "start-end":
+            try emit_corner_mapping(out, group, group_name, property_name, ["top-right", "top-left", "bottom-right", "top-right", "bottom-left", "top-left", "top-left", "bottom-left"])
+        elif mapping == "start-start":
+            try emit_corner_mapping(out, group, group_name, property_name, ["top-left", "top-right", "top-right", "bottom-right", "top-left", "bottom-left", "bottom-left", "top-left"])
+        elif mapping == "block-xy":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "y")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "x")}")
+        elif mapping == "inline-xy":
+            try out.line(f"            if {horizontal_tb}:")
+            try out.line(f"                return {try mapped_property(group, group_name, property_name, "x")}")
+            try out.line(f"            return {try mapped_property(group, group_name, property_name, "y")}")
+        else:
+            trap(f"Logical alias '{property_name}' has unrecognized mapping '{mapping}'")
+    try out.line("        _:")
+    try out.line("            assert(not property_is_logical_alias(property_id))")
+    try out.line("            return property_id")
+    try out.blank()
+
+## The four-way corner mappings (end-end, end-start, start-end, start-start): `corners` are the
+## physical corners for horizontal-tb ltr/rtl, vertical-rl or sideways-rl ltr/rtl, vertical-lr
+## ltr/rtl, and the remaining writing mode ltr/rtl.
+func emit_corner_mapping(out: Out*, group: const Json*, group_name: str, property_name: str, corners: str[8]) -> !:
+    let ltr = "used_direction == Direction.ltr"
+    let conditions: str[3] = ["mapping_context.writing_mode == WritingMode.horizontal_tb",
+        "mapping_context.writing_mode == WritingMode.vertical_rl or mapping_context.writing_mode == WritingMode.sideways_rl",
+        "mapping_context.writing_mode == WritingMode.vertical_lr"]
+    for index in 0..<3:
+        try out.line(f"            if {conditions[index]}:")
+        try out.line(f"                if {ltr}:")
+        try out.line(f"                    return {try mapped_property(group, group_name, property_name, corners[index * 2])}")
+        try out.line(f"                return {try mapped_property(group, group_name, property_name, corners[index * 2 + 1])}")
+        try out.blank()
+    try out.line(f"            if {ltr}:")
+    try out.line(f"                return {try mapped_property(group, group_name, property_name, corners[6])}")
+    try out.line(f"            return {try mapped_property(group, group_name, property_name, corners[7])}")
+
+func emit_map_physical_property_to_logical_alias(out: Out*, data: PropertyData*) -> !:
+    let groups = data.logical_property_groups
+    try put_ported(out, "PropertyID.cpp", "Web::CSS::map_physical_property_to_logical_alias")
+    try out.line("pub func map_physical_property_to_logical_alias(property_id: PropertyId, mapping_context: LogicalAliasMappingContext) -> PropertyId:")
+    try out.line("    match property_id:")
+    for group_index in 0..<groups.count:
+        let group = groups.at(group_index)
+        let physical_properties = group.get("physical") else trap("a logical property group without physical properties")
+        let logical_properties = group.get("logical") else trap("a logical property group without logical properties")
+        for physical_index in 0..<physical_properties.count:
+            try out.line(f"        {try property_case(physical_properties.at(physical_index).string())}:")
+            for logical_index in 0..<logical_properties.count:
+                let logical = try property_id_value(logical_properties.at(logical_index).string())
+                try out.line(f"            if map_logical_alias_to_physical_property({logical}, mapping_context) == property_id:")
+                try out.line(f"                return {logical}")
+            try out.line("            trap(\"VERIFY_NOT_REACHED\")")
+    try out.line("        _:")
+    try out.line("            assert(logical_property_group_for_property(property_id) == none or property_is_logical_alias(property_id))")
+    try out.line("            return property_id")
+    try out.blank()
+
+func emit_logical_property_group_for_property(out: Out*, data: PropertyData*) -> !:
+    let groups = data.logical_property_groups
+    try put_ported(out, "PropertyID.cpp", "Web::CSS::logical_property_group_for_property")
+    try out.line("pub func logical_property_group_for_property(property_id: PropertyId) -> LogicalPropertyGroup?:")
+    try out.line("    match property_id:")
+    # Build HashMap<String, Vector<String>> of all properties (physical + logical) per group
+    for group_index in 0..<groups.count:
+        let group = groups.at(group_index)
+        let group_value = try enum_value("LogicalPropertyGroup", try title_casify(groups.key(group_index)))
+        for side in ["physical", "logical"]:
+            let members = group.get(side) else trap("a logical property group without members")
+            for member_index in 0..<members.count:
+                try out.line(f"        {try property_case(members.at(member_index).string())}: return {group_value}")
+    try out.line("        _: return none")

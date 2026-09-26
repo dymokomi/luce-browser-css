@@ -1,0 +1,319 @@
+#==============================================================================================
+#
+#   emit_units - generated_units.lucb
+#
+#   DESCRIPTION:
+#       Port of Meta/Generators/generate_libweb_css_units.py: from Units.json, the dimension
+#       types, one unit enum per dimension, and the unit names, compatibility and ratios.
+#
+#==============================================================================================
+
+## Ported from generate_libweb_css_units.py json_is_valid: every dimension and unit in order,
+## and each unit exactly one of canonical, a number of the canonical unit, or relative.
+func units_json_is_valid(dimensions_data: const Json*, json_path: str) -> bool!:
+    var is_valid = true
+    var most_recent_dimension_name = ""
+    for dimension_index in 0..<dimensions_data.count:
+        let dimension_name = dimensions_data.key(dimension_index)
+        let units = dimensions_data.at(dimension_index)
+        # Dimensions should be in alphabetical order
+        if string_less(try lower(dimension_name), try lower(most_recent_dimension_name)):
+            print(f"{json_path}: Dimension `{dimension_name}` is in the wrong position. Please keep this list alphabetical!")
+            is_valid = false
+        most_recent_dimension_name = dimension_name
+
+        var most_recent_unit_name = ""
+        var canonical_unit: str? = none
+        for unit_index in 0..<units.count:
+            let unit_name = units.key(unit_index)
+            let unit_data = units.at(unit_index)
+            # Units should be in alphabetical order
+            if string_less(try lower(unit_name), try lower(most_recent_unit_name)):
+                print(f"{json_path}: {dimension_name} unit `{unit_name}` is in the wrong position. Please keep this list alphabetical!")
+                is_valid = false
+            most_recent_unit_name = unit_name
+
+            var is_canonical_unit = false
+            if let canonical = unit_data.get("is-canonical-unit"):
+                is_canonical_unit = canonical.kind == JsonKind.boolean and canonical.boolean()
+            let has_number_of_canonical_unit = unit_data.has("number-of-canonical-unit")
+            let relative_to = unit_data.get("relative-to")
+            var provided_count = 0
+            if is_canonical_unit:
+                provided_count += 1
+            if has_number_of_canonical_unit:
+                provided_count += 1
+            if relative_to != none:
+                provided_count += 1
+            if provided_count != 1:
+                print(f"{json_path}: {dimension_name} unit `{unit_name}` must have exactly 1 of `is-canonical-unit: true`, `number-of-canonical-unit`, or `relative-to` provided.")
+                is_valid = false
+            if is_canonical_unit:
+                if let existing = canonical_unit:
+                    print(f"{json_path}: {dimension_name} unit `{unit_name}` marked canonical, but `{existing}` was already. Must have exactly 1.")
+                    is_valid = false
+                else:
+                    canonical_unit = unit_name
+            if let relative = relative_to:
+                if dimension_name == "length":
+                    if not (relative.string() == "font" or relative.string() == "viewport"):
+                        print(f"{json_path}: {dimension_name} unit `{unit_name}` is marked as relative to `{relative.string()}`, which is unsupported.")
+                        is_valid = false
+                else:
+                    print(f"{json_path}: {dimension_name} unit `{unit_name}` is marked as relative, but only relative length units are currently supported.")
+                    is_valid = false
+
+        if canonical_unit == none:
+            print(f"{json_path}: {dimension_name} has no unit marked as canonical. Must have exactly 1.")
+            is_valid = false
+    return is_valid
+
+## Ported from generate_libweb_css_units.py canonical_unit_name.
+func canonical_unit_name(units: const Json*) -> str:
+    for index in 0..<units.count:
+        if let canonical = units.at(index).get("is-canonical-unit"):
+            if canonical.kind == JsonKind.boolean and canonical.boolean():
+                return units.key(index)
+    trap("No canonical unit found")
+
+## The unit's `relative-to` member, or none.
+func unit_relative_to(unit_data: const Json*) -> str?:
+    let relative = unit_data.get("relative-to") else return none
+    return relative.string()
+
+## Emit generated_units.lucb from Units.json.
+func emit_units(dimensions_data: const Json*) -> str!:
+    if not try units_json_is_valid(dimensions_data, "Units.json"):
+        trap("Units.json is not valid")
+    var out = try Out.create()
+    try put_generated_header(&out, "generated_units", "the CSS dimensions and their units",
+        ["Units.h", "Units.cpp"], "generate_libweb_css_units.py", "Units.json", no_notes())
+    try out.blank()
+
+    var dimension_titles = try StrList.create()
+    for index in 0..<dimensions_data.count:
+        try dimension_titles.append(try title_casify(dimensions_data.key(index)))
+    try put_enum(&out, "Web::CSS::DimensionType", "Units.h", "DimensionType",
+        underlying_type_for_enum(dimensions_data.count), &dimension_titles)
+    try out.blank()
+
+    try put_ported(&out, "Units.cpp", "Web::CSS::dimension_for_unit")
+    try out.line("pub func dimension_for_unit(unit_name: ak.StringView) -> DimensionType?:")
+    for dimension_index in 0..<dimensions_data.count:
+        let units = dimensions_data.at(dimension_index)
+        for unit_index in 0..<units.count:
+            let condition = try equals_ignoring_ascii_case("unit_name", units.key(unit_index))
+            if unit_index == 0:
+                try out.put(f"    if ({condition}")
+            else:
+                try out.put(f"\n            or {condition}")
+        try out.line("):")
+        try out.line(f"        return {try enum_value("DimensionType", dimension_titles.at(dimension_index))}")
+    try out.line("    return none")
+
+    for dimension_index in 0..<dimensions_data.count:
+        let dimension_name = dimensions_data.key(dimension_index)
+        let units = dimensions_data.at(dimension_index)
+        let name_titlecase = dimension_titles.at(dimension_index)
+        let name_snakecase = try snake_casify(dimension_name)
+        let unit_type = try cat([name_titlecase, "Unit"])
+        let suffix = try overload_suffix(unit_type)
+        let canonical = try title_casify(canonical_unit_name(units))
+
+        try put_mark(&out, unit_type)
+        var titles = try StrList.create()
+        for unit_index in 0..<units.count:
+            try titles.append(try title_casify(units.key(unit_index)))
+        try put_enum(&out, try cat(["Web::CSS::", unit_type]), "Units.h", unit_type,
+            underlying_type_for_enum(units.count), &titles)
+        try out.blank()
+
+        try put_ported(&out, "Units.h", try cat(["Web::CSS::canonical_", name_snakecase, "_unit"]))
+        try out.line(f"pub func canonical_{name_snakecase}_unit() -> {unit_type}:")
+        try out.line(f"    return {try enum_value(unit_type, canonical)}")
+        try out.blank()
+
+        try put_ported(&out, "Units.cpp", try cat(["Web::CSS::string_to_", name_snakecase, "_unit"]))
+        try out.line(f"pub func string_to_{name_snakecase}_unit(unit_name: ak.StringView) -> {unit_type}?:")
+        for unit_index in 0..<units.count:
+            try out.line(f"    if {try equals_ignoring_ascii_case("unit_name", units.key(unit_index))}:")
+            try out.line(f"        return {try enum_value(unit_type, titles.at(unit_index))}")
+        try out.line("    return none")
+        try out.blank()
+
+        try put_ported(&out, "Units.cpp", try cat(["Web::CSS::to_string(", unit_type, ")"]))
+        try out.line(f"pub func to_string_{suffix}(value: {unit_type}) -> ak.FlyString:")
+        try out.line("    match value:")
+        for unit_index in 0..<units.count:
+            try out.line(f"        .{try luce_case(titles.at(unit_index))}: return {try fly_string_literal(units.key(unit_index))}")
+        try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+        try out.blank()
+
+        try out.line(f"# units_are_compatible({unit_type}, {unit_type})'s lambda `is_absolute`.")
+        try out.line(f"func units_are_compatible_{suffix}_is_absolute(unit_: {unit_type}) -> bool:")
+        try out.line("    match unit_:")
+        # https://drafts.csswg.org/css-values-4/#compatible-units
+        for unit_index in 0..<units.count:
+            if units.at(unit_index).has("relative-to"):
+                continue
+            try out.line(f"        .{try luce_case(titles.at(unit_index))}: return true")
+        try out.line("        _: return false")
+        try out.blank()
+
+        try put_ported(&out, "Units.cpp", try cat(["Web::CSS::units_are_compatible(", unit_type, ", ", unit_type, ")"]))
+        try out.line(f"pub func units_are_compatible_{suffix}(a: {unit_type}, b: {unit_type}) -> bool:")
+        try out.line(f"    return units_are_compatible_{suffix}_is_absolute(a) and units_are_compatible_{suffix}_is_absolute(b)")
+        try out.blank()
+
+        try out.line(f"# ratio_between_units({unit_type}, {unit_type})'s lambda `ratio_to_canonical_unit`.")
+        try out.line(f"func ratio_between_units_{suffix}_ratio_to_canonical_unit(unit_: {unit_type}) -> f64:")
+        try out.line("    match unit_:")
+        for unit_index in 0..<units.count:
+            let unit_data = units.at(unit_index)
+            if unit_data.has("relative-to"):
+                continue
+            var ratio_text = "1.0"
+            if let ratio = unit_data.get("number-of-canonical-unit"):
+                ratio_text = try format_ratio(ratio.text)
+            else:
+                # This must be the canonical unit, so the ratio is 1.
+                ratio_text = "1.0"
+            try out.line(f"        .{try luce_case(titles.at(unit_index))}: return {ratio_text}")
+        try out.line("        # `from` is a relative unit, so this isn't valid.")
+        try out.line("        _: trap(\"VERIFY_NOT_REACHED\")")
+        try out.blank()
+
+        try put_ported(&out, "Units.cpp", try cat(["Web::CSS::ratio_between_units(", unit_type, ", ", unit_type, ")"]))
+        try out.line(f"pub func ratio_between_units_{suffix}(from_: {unit_type}, to: {unit_type}) -> f64:")
+        try out.line("    if from_ == to:")
+        try out.line("        return 1.0")
+        try out.line(f"    if to == {try enum_value(unit_type, canonical)}:")
+        try out.line(f"        return ratio_between_units_{suffix}_ratio_to_canonical_unit(from_)")
+        try out.line(f"    return ratio_between_units_{suffix}_ratio_to_canonical_unit(from_) / ratio_between_units_{suffix}_ratio_to_canonical_unit(to)")
+
+    # Length-specific functions
+    let length_units = dimensions_data.get("length") else trap("Units.json has no length units")
+    try put_mark(&out, "LengthUnit")
+    try put_ported(&out, "Units.cpp", "Web::CSS::is_absolute")
+    try out.line("pub func is_absolute(unit_: LengthUnit) -> bool:")
+    try out.line("    match unit_:")
+    for index in 0..<length_units.count:
+        if length_units.at(index).has("relative-to"):
+            continue
+        try out.line(f"        .{try luce_case(try title_casify(length_units.key(index)))}: return true")
+    try out.line("        _: return false")
+    try out.blank()
+    for relative_to in ["font", "viewport"]:
+        try put_ported(&out, "Units.cpp", try cat(["Web::CSS::is_", relative_to, "_relative"]))
+        try out.line(f"pub func is_{relative_to}_relative(unit_: LengthUnit) -> bool:")
+        try out.line("    match unit_:")
+        for index in 0..<length_units.count:
+            let unit_relative = unit_relative_to(length_units.at(index)) else continue
+            if unit_relative != relative_to:
+                continue
+            try out.line(f"        .{try luce_case(try title_casify(length_units.key(index)))}: return true")
+        try out.line("        _: return false")
+        try out.blank()
+    try put_ported(&out, "Units.h", "Web::CSS::is_relative")
+    try out.line("pub func is_relative(unit_: LengthUnit) -> bool:")
+    try out.line("    return not is_absolute(unit_)")
+    return out.text()
+
+# mark: Numbers =================================================================================
+
+## A JSON number as a Luce f64 literal of the same value, spelled as generate_libweb_css_units.py's
+## format_ratio spells it: Python's `str` of the parsed number, the shortest decimal that reads
+## back as the same double, with `.0` added to a whole number.
+func format_ratio(text: str) -> str!:
+    let value = try strings.parse_f64(text)
+    if value < 0.0:
+        trap(f"format_ratio: unsupported negative number {text}")
+    # The double's value to 17 significant digits (%.17g), then the fewest of those digits
+    # that read back as the same double.
+    var buffer: u8[64]
+    let exact = try strings.format_f64(value, buffer)
+    var digits = try strings.Builder.create()
+    var point: isize = 0
+    var seen_point = false
+    var leading = true
+    var exponent: isize = 0
+    var index: usize = 0
+    while index < exact.length:
+        let byte = exact.bytes[index]
+        index += 1
+        if byte == '.':
+            seen_point = true
+            continue
+        if byte == 'e' or byte == 'E':
+            let parsed = strings.parse_i64(slice(exact, index, exact.length)) else trap(f"format_ratio: bad exponent in {exact}")
+            exponent = (isize)parsed
+            break
+        if not is_digit(byte):
+            trap(f"format_ratio: unsupported number {exact}")
+        if leading and byte == '0':
+            if seen_point:
+                point -= 1
+            continue
+        leading = false
+        let one: u8[1] = [byte]
+        discard(try digits.write(one))
+        if not seen_point:
+            point += 1
+    let all = digits.view()
+    if all.length == 0:
+        return "0.0"
+    for count in 1..=all.length:
+        let candidate = try round_digits(all, count, point + exponent)
+        if try strings.parse_f64(candidate) == value:
+            return candidate
+    trap(f"format_ratio: no representation of {text}")
+
+# `digits` (a decimal point `point` digits from their start) rounded half up to `count`
+# significant digits, spelled positionally.
+func round_digits(digits: str, count: usize, point: isize) -> str!:
+    var kept = try new u8[count + 1]
+    for index in 0..<count:
+        kept[index + 1] = digits.bytes[index]
+    var position = point + 1
+    if count < digits.length and digits.bytes[count] >= '5':
+        var index = count
+        while true:
+            if kept[index] == '9':
+                kept[index] = '0'
+                index -= 1
+                continue
+            if index == 0:
+                kept[0] = '1'
+            else:
+                kept[index] += 1
+            break
+    var start: usize = 1
+    if kept[0] == '1':
+        start = 0
+    else:
+        position -= 1
+    # The digits without trailing zeros.
+    var end = kept.length
+    while end > start + 1 and kept[end - 1] == '0':
+        end -= 1
+    let significant = (str)kept[start..<end]
+    var out = try strings.Builder.create()
+    if position <= 0:
+        try out.put("0.")
+        var zeros = position
+        while zeros < 0:
+            try out.put("0")
+            zeros += 1
+        try out.put(significant)
+    elif (usize)position >= significant.length:
+        try out.put(significant)
+        var zeros = (usize)position - significant.length
+        while zeros > 0:
+            try out.put("0")
+            zeros -= 1
+        try out.put(".0")
+    else:
+        try out.put(slice(significant, 0, (usize)position))
+        try out.put(".")
+        try out.put(slice(significant, (usize)position, significant.length))
+    return out.view()
