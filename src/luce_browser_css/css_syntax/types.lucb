@@ -70,9 +70,9 @@ pub func at_rule_for_each_as_declaration_list(this: const AtRule*, visit: ak.Fun
     # <declaration-list>: only declarations are allowed; at-rules and qualified rules are automatically invalid.
     var captures = AtRuleForEachReportCaptures(this = this)
     at_rule_for_each(this,
-        ak.Function1[const AtRule*, unit](call = at_rule_for_each_report_at_rule, context = &captures),
-        ak.Function1[const QualifiedRule*, unit](call = at_rule_for_each_report_qualified_rule, context = &captures),
-        visit)
+                     ak.Function1[const AtRule*, unit](call = at_rule_for_each_report_at_rule, context = &captures),
+                     ak.Function1[const QualifiedRule*, unit](call = at_rule_for_each_report_qualified_rule, context = &captures),
+                     visit)
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Types.cpp:98 Web::CSS::Parser::AtRule::for_each_as_qualified_rule_list.
 # https://drafts.csswg.org/css-syntax/#typedef-qualified-rule-list
@@ -80,9 +80,9 @@ pub func at_rule_for_each_as_qualified_rule_list(this: const AtRule*, visit: ak.
     # <qualified-rule-list>: only qualified rules are allowed; declarations and at-rules are automatically invalid.
     var captures = AtRuleForEachReportCaptures(this = this)
     at_rule_for_each(this,
-        ak.Function1[const AtRule*, unit](call = at_rule_for_each_report_at_rule, context = &captures),
-        visit,
-        ak.Function1[const Declaration*, unit](call = at_rule_for_each_report_declaration, context = &captures))
+                     ak.Function1[const AtRule*, unit](call = at_rule_for_each_report_at_rule, context = &captures),
+                     visit,
+                     ak.Function1[const Declaration*, unit](call = at_rule_for_each_report_declaration, context = &captures))
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Types.cpp:118 Web::CSS::Parser::AtRule::for_each_as_at_rule_list.
 # https://drafts.csswg.org/css-syntax/#typedef-at-rule-list
@@ -90,9 +90,9 @@ pub func at_rule_for_each_as_at_rule_list(this: const AtRule*, visit: ak.Functio
     # <at-rule-list>: only at-rules are allowed; declarations and qualified rules are automatically invalid.
     var captures = AtRuleForEachReportCaptures(this = this)
     at_rule_for_each(this,
-        visit,
-        ak.Function1[const QualifiedRule*, unit](call = at_rule_for_each_report_qualified_rule, context = &captures),
-        ak.Function1[const Declaration*, unit](call = at_rule_for_each_report_declaration, context = &captures))
+                     visit,
+                     ak.Function1[const QualifiedRule*, unit](call = at_rule_for_each_report_qualified_rule, context = &captures),
+                     ak.Function1[const Declaration*, unit](call = at_rule_for_each_report_declaration, context = &captures))
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Types.cpp:138 Web::CSS::Parser::AtRule::for_each_as_declaration_rule_list.
 # https://drafts.csswg.org/css-syntax/#typedef-declaration-rule-list
@@ -100,9 +100,9 @@ pub func at_rule_for_each_as_declaration_rule_list(this: const AtRule*, visit_at
     # <declaration-rule-list>: declarations and at-rules are allowed; qualified rules are automatically invalid.
     var captures = AtRuleForEachReportCaptures(this = this)
     at_rule_for_each(this,
-        visit_at_rule,
-        ak.Function1[const QualifiedRule*, unit](call = at_rule_for_each_report_qualified_rule, context = &captures),
-        visit_declaration)
+                     visit_at_rule,
+                     ak.Function1[const QualifiedRule*, unit](call = at_rule_for_each_report_qualified_rule, context = &captures),
+                     visit_declaration)
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Types.cpp:153 Web::CSS::Parser::AtRule::for_each_as_rule_list.
 # https://drafts.csswg.org/css-syntax/#typedef-rule-list

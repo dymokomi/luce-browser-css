@@ -69,7 +69,7 @@ noinline func test_token_stream_marks():
         ak.vector_append_t(&tokens, ident_token(name))
     var stream = token_stream_create(tokens)
 
-    token_stream_mark(&stream) # 0
+    token_stream_mark(&stream)  # 0
 
     assert(token_stream_remaining_token_count(&stream) == 7)
 
@@ -79,13 +79,13 @@ noinline func test_token_stream_marks():
 
     assert(token_stream_remaining_token_count(&stream) == 4)
 
-    token_stream_mark(&stream) # 3
+    token_stream_mark(&stream)  # 3
 
     token_stream_discard_a_token(&stream)
 
     assert(token_stream_remaining_token_count(&stream) == 3)
 
-    token_stream_restore_a_mark(&stream) # Back to 3
+    token_stream_restore_a_mark(&stream)  # Back to 3
 
     assert(token_stream_remaining_token_count(&stream) == 4)
 
@@ -95,13 +95,13 @@ noinline func test_token_stream_marks():
 
     assert(token_stream_remaining_token_count(&stream) == 1)
 
-    token_stream_mark(&stream) # 6
+    token_stream_mark(&stream)  # 6
 
     token_stream_discard_a_mark(&stream)
 
     assert(token_stream_remaining_token_count(&stream) == 1)
 
-    token_stream_restore_a_mark(&stream) # Back to 0
+    token_stream_restore_a_mark(&stream)  # Back to 0
 
     assert(token_stream_remaining_token_count(&stream) == 7)
 

@@ -21,8 +21,11 @@
 ## method that ignores its receiver.
 pub interface TokenStreamToken[T]:
     func token_stream_is(type_: TokenType) -> bool
+
     func token_stream_to_string() -> ak.String
+
     func token_stream_to_debug_string() -> ak.String
+
     func token_stream_make_eof() -> T
 
 ## Web::CSS::Parser::TokenStream (Libraries/LibWeb/CSS/Parser/TokenStream.h:19): a generic struct.

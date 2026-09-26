@@ -118,8 +118,8 @@ pub func tokenizer_consume_the_remnants_of_a_bad_url(this: Tokenizer*):
             # the <bad-url-token>. This is otherwise identical to the "anything else" clause.
             discard(tokenizer_consume_escaped_code_point(this))
 
-        # anything else
-        # Do nothing.
+# anything else
+# Do nothing.
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:703 Web::CSS::Parser::Tokenizer::consume_as_much_whitespace_as_possible.
 pub func tokenizer_consume_as_much_whitespace_as_possible(this: Tokenizer*):

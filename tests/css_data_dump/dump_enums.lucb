@@ -21,8 +21,8 @@ let descriptor_count: u64 = 37
 ## Print, for an enum of Enums.json with `count` values: each value's keyword and string, then
 ## each keyword that converts to a value.
 func dump_enum[E](out: Out*, name: str, count: u64, from_int: func(u64) -> E, to_int: func(E) -> u64,
-        to_keyword: func(E) -> css_data.Keyword, to_string: func(E) -> ak.StringView,
-        from_keyword: func(css_data.Keyword) -> E?) -> !:
+                  to_keyword: func(E) -> css_data.Keyword, to_string: func(E) -> ak.StringView,
+                  from_keyword: func(css_data.Keyword) -> E?) -> !:
     try out.p(f"enum {name} {count}\n")
     for value in 0..<count:
         let e = from_int(value)
@@ -36,263 +36,263 @@ func dump_enum[E](out: Out*, name: str, count: u64, from_int: func(u64) -> E, to
 ## The Enums.json part of the dump.
 func dump_enums(out: Out*) -> !:
     try dump_enum[css_data.AbsoluteSize](out, "AbsoluteSize", 8, absolute_size_from_int, absolute_size_to_int,
-        css_data.to_keyword_absolute_size, css_data.to_string_absolute_size, css_data.keyword_to_absolute_size)
+                                         css_data.to_keyword_absolute_size, css_data.to_string_absolute_size, css_data.keyword_to_absolute_size)
     try dump_enum[css_data.AlignContent](out, "AlignContent", 10, align_content_from_int, align_content_to_int,
-        css_data.to_keyword_align_content, css_data.to_string_align_content, css_data.keyword_to_align_content)
+                                         css_data.to_keyword_align_content, css_data.to_string_align_content, css_data.keyword_to_align_content)
     try dump_enum[css_data.AlignItems](out, "AlignItems", 12, align_items_from_int, align_items_to_int,
-        css_data.to_keyword_align_items, css_data.to_string_align_items, css_data.keyword_to_align_items)
+                                       css_data.to_keyword_align_items, css_data.to_string_align_items, css_data.keyword_to_align_items)
     try dump_enum[css_data.AlignSelf](out, "AlignSelf", 13, align_self_from_int, align_self_to_int,
-        css_data.to_keyword_align_self, css_data.to_string_align_self, css_data.keyword_to_align_self)
+                                      css_data.to_keyword_align_self, css_data.to_string_align_self, css_data.keyword_to_align_self)
     try dump_enum[css_data.AnchorSide](out, "AnchorSide", 11, anchor_side_from_int, anchor_side_to_int,
-        css_data.to_keyword_anchor_side, css_data.to_string_anchor_side, css_data.keyword_to_anchor_side)
+                                       css_data.to_keyword_anchor_side, css_data.to_string_anchor_side, css_data.keyword_to_anchor_side)
     try dump_enum[css_data.AnchorSize](out, "AnchorSize", 6, anchor_size_from_int, anchor_size_to_int,
-        css_data.to_keyword_anchor_size, css_data.to_string_anchor_size, css_data.keyword_to_anchor_size)
+                                       css_data.to_keyword_anchor_size, css_data.to_string_anchor_size, css_data.keyword_to_anchor_size)
     try dump_enum[css_data.AnimationComposition](out, "AnimationComposition", 3, animation_composition_from_int, animation_composition_to_int,
-        css_data.to_keyword_animation_composition, css_data.to_string_animation_composition, css_data.keyword_to_animation_composition)
+                                                 css_data.to_keyword_animation_composition, css_data.to_string_animation_composition, css_data.keyword_to_animation_composition)
     try dump_enum[css_data.AnimationDirection](out, "AnimationDirection", 4, animation_direction_from_int, animation_direction_to_int,
-        css_data.to_keyword_animation_direction, css_data.to_string_animation_direction, css_data.keyword_to_animation_direction)
+                                               css_data.to_keyword_animation_direction, css_data.to_string_animation_direction, css_data.keyword_to_animation_direction)
     try dump_enum[css_data.AnimationFillMode](out, "AnimationFillMode", 4, animation_fill_mode_from_int, animation_fill_mode_to_int,
-        css_data.to_keyword_animation_fill_mode, css_data.to_string_animation_fill_mode, css_data.keyword_to_animation_fill_mode)
+                                              css_data.to_keyword_animation_fill_mode, css_data.to_string_animation_fill_mode, css_data.keyword_to_animation_fill_mode)
     try dump_enum[css_data.AnimationPlayState](out, "AnimationPlayState", 2, animation_play_state_from_int, animation_play_state_to_int,
-        css_data.to_keyword_animation_play_state, css_data.to_string_animation_play_state, css_data.keyword_to_animation_play_state)
+                                               css_data.to_keyword_animation_play_state, css_data.to_string_animation_play_state, css_data.keyword_to_animation_play_state)
     try dump_enum[css_data.Appearance](out, "Appearance", 16, appearance_from_int, appearance_to_int,
-        css_data.to_keyword_appearance, css_data.to_string_appearance, css_data.keyword_to_appearance)
+                                       css_data.to_keyword_appearance, css_data.to_string_appearance, css_data.keyword_to_appearance)
     try dump_enum[css_data.Axis](out, "Axis", 4, axis_from_int, axis_to_int,
-        css_data.to_keyword_axis, css_data.to_string_axis, css_data.keyword_to_axis)
+                                 css_data.to_keyword_axis, css_data.to_string_axis, css_data.keyword_to_axis)
     try dump_enum[css_data.BackgroundAttachment](out, "BackgroundAttachment", 3, background_attachment_from_int, background_attachment_to_int,
-        css_data.to_keyword_background_attachment, css_data.to_string_background_attachment, css_data.keyword_to_background_attachment)
+                                                 css_data.to_keyword_background_attachment, css_data.to_string_background_attachment, css_data.keyword_to_background_attachment)
     try dump_enum[css_data.BackgroundBox](out, "BackgroundBox", 4, background_box_from_int, background_box_to_int,
-        css_data.to_keyword_background_box, css_data.to_string_background_box, css_data.keyword_to_background_box)
+                                          css_data.to_keyword_background_box, css_data.to_string_background_box, css_data.keyword_to_background_box)
     try dump_enum[css_data.BaselineMetric](out, "BaselineMetric", 8, baseline_metric_from_int, baseline_metric_to_int,
-        css_data.to_keyword_baseline_metric, css_data.to_string_baseline_metric, css_data.keyword_to_baseline_metric)
+                                           css_data.to_keyword_baseline_metric, css_data.to_string_baseline_metric, css_data.keyword_to_baseline_metric)
     try dump_enum[css_data.BorderCollapse](out, "BorderCollapse", 2, border_collapse_from_int, border_collapse_to_int,
-        css_data.to_keyword_border_collapse, css_data.to_string_border_collapse, css_data.keyword_to_border_collapse)
+                                           css_data.to_keyword_border_collapse, css_data.to_string_border_collapse, css_data.keyword_to_border_collapse)
     try dump_enum[css_data.BorderImageRepeat](out, "BorderImageRepeat", 4, border_image_repeat_from_int, border_image_repeat_to_int,
-        css_data.to_keyword_border_image_repeat, css_data.to_string_border_image_repeat, css_data.keyword_to_border_image_repeat)
+                                              css_data.to_keyword_border_image_repeat, css_data.to_string_border_image_repeat, css_data.keyword_to_border_image_repeat)
     try dump_enum[css_data.BoxSizing](out, "BoxSizing", 2, box_sizing_from_int, box_sizing_to_int,
-        css_data.to_keyword_box_sizing, css_data.to_string_box_sizing, css_data.keyword_to_box_sizing)
+                                      css_data.to_keyword_box_sizing, css_data.to_string_box_sizing, css_data.keyword_to_box_sizing)
     try dump_enum[css_data.CaptionSide](out, "CaptionSide", 2, caption_side_from_int, caption_side_to_int,
-        css_data.to_keyword_caption_side, css_data.to_string_caption_side, css_data.keyword_to_caption_side)
+                                        css_data.to_keyword_caption_side, css_data.to_string_caption_side, css_data.keyword_to_caption_side)
     try dump_enum[css_data.Clear](out, "Clear", 6, clear_from_int, clear_to_int,
-        css_data.to_keyword_clear, css_data.to_string_clear, css_data.keyword_to_clear)
+                                  css_data.to_keyword_clear, css_data.to_string_clear, css_data.keyword_to_clear)
     try dump_enum[css_data.ColorInterpolation](out, "ColorInterpolation", 3, color_interpolation_from_int, color_interpolation_to_int,
-        css_data.to_keyword_color_interpolation, css_data.to_string_color_interpolation, css_data.keyword_to_color_interpolation)
+                                               css_data.to_keyword_color_interpolation, css_data.to_string_color_interpolation, css_data.keyword_to_color_interpolation)
     try dump_enum[css_data.ColumnSpan](out, "ColumnSpan", 2, column_span_from_int, column_span_to_int,
-        css_data.to_keyword_column_span, css_data.to_string_column_span, css_data.keyword_to_column_span)
+                                       css_data.to_keyword_column_span, css_data.to_string_column_span, css_data.keyword_to_column_span)
     try dump_enum[css_data.CommonLigValue](out, "CommonLigValue", 2, common_lig_value_from_int, common_lig_value_to_int,
-        css_data.to_keyword_common_lig_value, css_data.to_string_common_lig_value, css_data.keyword_to_common_lig_value)
+                                           css_data.to_keyword_common_lig_value, css_data.to_string_common_lig_value, css_data.keyword_to_common_lig_value)
     try dump_enum[css_data.CompositingOperator](out, "CompositingOperator", 4, compositing_operator_from_int, compositing_operator_to_int,
-        css_data.to_keyword_compositing_operator, css_data.to_string_compositing_operator, css_data.keyword_to_compositing_operator)
+                                                css_data.to_keyword_compositing_operator, css_data.to_string_compositing_operator, css_data.keyword_to_compositing_operator)
     try dump_enum[css_data.Contain](out, "Contain", 8, contain_from_int, contain_to_int,
-        css_data.to_keyword_contain, css_data.to_string_contain, css_data.keyword_to_contain)
+                                    css_data.to_keyword_contain, css_data.to_string_contain, css_data.keyword_to_contain)
     try dump_enum[css_data.ContentVisibility](out, "ContentVisibility", 3, content_visibility_from_int, content_visibility_to_int,
-        css_data.to_keyword_content_visibility, css_data.to_string_content_visibility, css_data.keyword_to_content_visibility)
+                                              css_data.to_keyword_content_visibility, css_data.to_string_content_visibility, css_data.keyword_to_content_visibility)
     try dump_enum[css_data.ContextualAltValue](out, "ContextualAltValue", 2, contextual_alt_value_from_int, contextual_alt_value_to_int,
-        css_data.to_keyword_contextual_alt_value, css_data.to_string_contextual_alt_value, css_data.keyword_to_contextual_alt_value)
+                                               css_data.to_keyword_contextual_alt_value, css_data.to_string_contextual_alt_value, css_data.keyword_to_contextual_alt_value)
     try dump_enum[css_data.CoordBox](out, "CoordBox", 6, coord_box_from_int, coord_box_to_int,
-        css_data.to_keyword_coord_box, css_data.to_string_coord_box, css_data.keyword_to_coord_box)
+                                     css_data.to_keyword_coord_box, css_data.to_string_coord_box, css_data.keyword_to_coord_box)
     try dump_enum[css_data.CounterStyleNameKeyword](out, "CounterStyleNameKeyword", 188, counter_style_name_keyword_from_int, counter_style_name_keyword_to_int,
-        css_data.to_keyword_counter_style_name_keyword, css_data.to_string_counter_style_name_keyword, css_data.keyword_to_counter_style_name_keyword)
+                                                    css_data.to_keyword_counter_style_name_keyword, css_data.to_string_counter_style_name_keyword, css_data.keyword_to_counter_style_name_keyword)
     try dump_enum[css_data.CounterStyleSystem](out, "CounterStyleSystem", 5, counter_style_system_from_int, counter_style_system_to_int,
-        css_data.to_keyword_counter_style_system, css_data.to_string_counter_style_system, css_data.keyword_to_counter_style_system)
+                                               css_data.to_keyword_counter_style_system, css_data.to_string_counter_style_system, css_data.keyword_to_counter_style_system)
     try dump_enum[css_data.CrossOriginModifierValue](out, "CrossOriginModifierValue", 2, cross_origin_modifier_value_from_int, cross_origin_modifier_value_to_int,
-        css_data.to_keyword_cross_origin_modifier_value, css_data.to_string_cross_origin_modifier_value, css_data.keyword_to_cross_origin_modifier_value)
+                                                     css_data.to_keyword_cross_origin_modifier_value, css_data.to_string_cross_origin_modifier_value, css_data.keyword_to_cross_origin_modifier_value)
     try dump_enum[css_data.CursorPredefined](out, "CursorPredefined", 36, cursor_predefined_from_int, cursor_predefined_to_int,
-        css_data.to_keyword_cursor_predefined, css_data.to_string_cursor_predefined, css_data.keyword_to_cursor_predefined)
+                                             css_data.to_keyword_cursor_predefined, css_data.to_string_cursor_predefined, css_data.keyword_to_cursor_predefined)
     try dump_enum[css_data.Direction](out, "Direction", 2, direction_from_int, direction_to_int,
-        css_data.to_keyword_direction, css_data.to_string_direction, css_data.keyword_to_direction)
+                                      css_data.to_keyword_direction, css_data.to_string_direction, css_data.keyword_to_direction)
     try dump_enum[css_data.DiscretionaryLigValue](out, "DiscretionaryLigValue", 2, discretionary_lig_value_from_int, discretionary_lig_value_to_int,
-        css_data.to_keyword_discretionary_lig_value, css_data.to_string_discretionary_lig_value, css_data.keyword_to_discretionary_lig_value)
+                                                  css_data.to_keyword_discretionary_lig_value, css_data.to_string_discretionary_lig_value, css_data.keyword_to_discretionary_lig_value)
     try dump_enum[css_data.DisplayBox](out, "DisplayBox", 2, display_box_from_int, display_box_to_int,
-        css_data.to_keyword_display_box, css_data.to_string_display_box, css_data.keyword_to_display_box)
+                                       css_data.to_keyword_display_box, css_data.to_string_display_box, css_data.keyword_to_display_box)
     try dump_enum[css_data.DisplayInside](out, "DisplayInside", 7, display_inside_from_int, display_inside_to_int,
-        css_data.to_keyword_display_inside, css_data.to_string_display_inside, css_data.keyword_to_display_inside)
+                                          css_data.to_keyword_display_inside, css_data.to_string_display_inside, css_data.keyword_to_display_inside)
     try dump_enum[css_data.DisplayInternal](out, "DisplayInternal", 12, display_internal_from_int, display_internal_to_int,
-        css_data.to_keyword_display_internal, css_data.to_string_display_internal, css_data.keyword_to_display_internal)
+                                            css_data.to_keyword_display_internal, css_data.to_string_display_internal, css_data.keyword_to_display_internal)
     try dump_enum[css_data.DisplayLegacy](out, "DisplayLegacy", 4, display_legacy_from_int, display_legacy_to_int,
-        css_data.to_keyword_display_legacy, css_data.to_string_display_legacy, css_data.keyword_to_display_legacy)
+                                          css_data.to_keyword_display_legacy, css_data.to_string_display_legacy, css_data.keyword_to_display_legacy)
     try dump_enum[css_data.DisplayOutside](out, "DisplayOutside", 3, display_outside_from_int, display_outside_to_int,
-        css_data.to_keyword_display_outside, css_data.to_string_display_outside, css_data.keyword_to_display_outside)
+                                           css_data.to_keyword_display_outside, css_data.to_string_display_outside, css_data.keyword_to_display_outside)
     try dump_enum[css_data.EasingKeyword](out, "EasingKeyword", 5, easing_keyword_from_int, easing_keyword_to_int,
-        css_data.to_keyword_easing_keyword, css_data.to_string_easing_keyword, css_data.keyword_to_easing_keyword)
+                                          css_data.to_keyword_easing_keyword, css_data.to_string_easing_keyword, css_data.keyword_to_easing_keyword)
     try dump_enum[css_data.EastAsianVariant](out, "EastAsianVariant", 6, east_asian_variant_from_int, east_asian_variant_to_int,
-        css_data.to_keyword_east_asian_variant, css_data.to_string_east_asian_variant, css_data.keyword_to_east_asian_variant)
+                                             css_data.to_keyword_east_asian_variant, css_data.to_string_east_asian_variant, css_data.keyword_to_east_asian_variant)
     try dump_enum[css_data.EastAsianWidth](out, "EastAsianWidth", 2, east_asian_width_from_int, east_asian_width_to_int,
-        css_data.to_keyword_east_asian_width, css_data.to_string_east_asian_width, css_data.keyword_to_east_asian_width)
+                                           css_data.to_keyword_east_asian_width, css_data.to_string_east_asian_width, css_data.keyword_to_east_asian_width)
     try dump_enum[css_data.EmptyCells](out, "EmptyCells", 2, empty_cells_from_int, empty_cells_to_int,
-        css_data.to_keyword_empty_cells, css_data.to_string_empty_cells, css_data.keyword_to_empty_cells)
+                                       css_data.to_keyword_empty_cells, css_data.to_string_empty_cells, css_data.keyword_to_empty_cells)
     try dump_enum[css_data.FillRule](out, "FillRule", 2, fill_rule_from_int, fill_rule_to_int,
-        css_data.to_keyword_fill_rule, css_data.to_string_fill_rule, css_data.keyword_to_fill_rule)
+                                     css_data.to_keyword_fill_rule, css_data.to_string_fill_rule, css_data.keyword_to_fill_rule)
     try dump_enum[css_data.FlexDirection](out, "FlexDirection", 4, flex_direction_from_int, flex_direction_to_int,
-        css_data.to_keyword_flex_direction, css_data.to_string_flex_direction, css_data.keyword_to_flex_direction)
+                                          css_data.to_keyword_flex_direction, css_data.to_string_flex_direction, css_data.keyword_to_flex_direction)
     try dump_enum[css_data.FlexWrap](out, "FlexWrap", 3, flex_wrap_from_int, flex_wrap_to_int,
-        css_data.to_keyword_flex_wrap, css_data.to_string_flex_wrap, css_data.keyword_to_flex_wrap)
+                                     css_data.to_keyword_flex_wrap, css_data.to_string_flex_wrap, css_data.keyword_to_flex_wrap)
     try dump_enum[css_data.Float](out, "Float", 5, float_from_int, float_to_int,
-        css_data.to_keyword_float, css_data.to_string_float, css_data.keyword_to_float)
+                                  css_data.to_keyword_float, css_data.to_string_float, css_data.keyword_to_float)
     try dump_enum[css_data.FontDisplay](out, "FontDisplay", 5, font_display_from_int, font_display_to_int,
-        css_data.to_keyword_font_display, css_data.to_string_font_display, css_data.keyword_to_font_display)
+                                        css_data.to_keyword_font_display, css_data.to_string_font_display, css_data.keyword_to_font_display)
     try dump_enum[css_data.FontKerning](out, "FontKerning", 3, font_kerning_from_int, font_kerning_to_int,
-        css_data.to_keyword_font_kerning, css_data.to_string_font_kerning, css_data.keyword_to_font_kerning)
+                                        css_data.to_keyword_font_kerning, css_data.to_string_font_kerning, css_data.keyword_to_font_kerning)
     try dump_enum[css_data.FontOpticalSizing](out, "FontOpticalSizing", 2, font_optical_sizing_from_int, font_optical_sizing_to_int,
-        css_data.to_keyword_font_optical_sizing, css_data.to_string_font_optical_sizing, css_data.keyword_to_font_optical_sizing)
+                                              css_data.to_keyword_font_optical_sizing, css_data.to_string_font_optical_sizing, css_data.keyword_to_font_optical_sizing)
     try dump_enum[css_data.FontStyleKeyword](out, "FontStyleKeyword", 5, font_style_keyword_from_int, font_style_keyword_to_int,
-        css_data.to_keyword_font_style_keyword, css_data.to_string_font_style_keyword, css_data.keyword_to_font_style_keyword)
+                                             css_data.to_keyword_font_style_keyword, css_data.to_string_font_style_keyword, css_data.keyword_to_font_style_keyword)
     try dump_enum[css_data.FontTech](out, "FontTech", 12, font_tech_from_int, font_tech_to_int,
-        css_data.to_keyword_font_tech, css_data.to_string_font_tech, css_data.keyword_to_font_tech)
+                                     css_data.to_keyword_font_tech, css_data.to_string_font_tech, css_data.keyword_to_font_tech)
     try dump_enum[css_data.FontVariantCaps](out, "FontVariantCaps", 7, font_variant_caps_from_int, font_variant_caps_to_int,
-        css_data.to_keyword_font_variant_caps, css_data.to_string_font_variant_caps, css_data.keyword_to_font_variant_caps)
+                                            css_data.to_keyword_font_variant_caps, css_data.to_string_font_variant_caps, css_data.keyword_to_font_variant_caps)
     try dump_enum[css_data.FontVariantEmoji](out, "FontVariantEmoji", 4, font_variant_emoji_from_int, font_variant_emoji_to_int,
-        css_data.to_keyword_font_variant_emoji, css_data.to_string_font_variant_emoji, css_data.keyword_to_font_variant_emoji)
+                                             css_data.to_keyword_font_variant_emoji, css_data.to_string_font_variant_emoji, css_data.keyword_to_font_variant_emoji)
     try dump_enum[css_data.FontVariantPosition](out, "FontVariantPosition", 3, font_variant_position_from_int, font_variant_position_to_int,
-        css_data.to_keyword_font_variant_position, css_data.to_string_font_variant_position, css_data.keyword_to_font_variant_position)
+                                                css_data.to_keyword_font_variant_position, css_data.to_string_font_variant_position, css_data.keyword_to_font_variant_position)
     try dump_enum[css_data.FontWidth](out, "FontWidth", 9, font_width_from_int, font_width_to_int,
-        css_data.to_keyword_font_width, css_data.to_string_font_width, css_data.keyword_to_font_width)
+                                      css_data.to_keyword_font_width, css_data.to_string_font_width, css_data.keyword_to_font_width)
     try dump_enum[css_data.GenericFontFamily](out, "GenericFontFamily", 10, generic_font_family_from_int, generic_font_family_to_int,
-        css_data.to_keyword_generic_font_family, css_data.to_string_generic_font_family, css_data.keyword_to_generic_font_family)
+                                              css_data.to_keyword_generic_font_family, css_data.to_string_generic_font_family, css_data.keyword_to_generic_font_family)
     try dump_enum[css_data.HistoricalLigValue](out, "HistoricalLigValue", 2, historical_lig_value_from_int, historical_lig_value_to_int,
-        css_data.to_keyword_historical_lig_value, css_data.to_string_historical_lig_value, css_data.keyword_to_historical_lig_value)
+                                               css_data.to_keyword_historical_lig_value, css_data.to_string_historical_lig_value, css_data.keyword_to_historical_lig_value)
     try dump_enum[css_data.HueInterpolationMethod](out, "HueInterpolationMethod", 4, hue_interpolation_method_from_int, hue_interpolation_method_to_int,
-        css_data.to_keyword_hue_interpolation_method, css_data.to_string_hue_interpolation_method, css_data.keyword_to_hue_interpolation_method)
+                                                   css_data.to_keyword_hue_interpolation_method, css_data.to_string_hue_interpolation_method, css_data.keyword_to_hue_interpolation_method)
     try dump_enum[css_data.ImageRendering](out, "ImageRendering", 5, image_rendering_from_int, image_rendering_to_int,
-        css_data.to_keyword_image_rendering, css_data.to_string_image_rendering, css_data.keyword_to_image_rendering)
+                                           css_data.to_keyword_image_rendering, css_data.to_string_image_rendering, css_data.keyword_to_image_rendering)
     try dump_enum[css_data.Isolation](out, "Isolation", 2, isolation_from_int, isolation_to_int,
-        css_data.to_keyword_isolation, css_data.to_string_isolation, css_data.keyword_to_isolation)
+                                      css_data.to_keyword_isolation, css_data.to_string_isolation, css_data.keyword_to_isolation)
     try dump_enum[css_data.JustifyContent](out, "JustifyContent", 12, justify_content_from_int, justify_content_to_int,
-        css_data.to_keyword_justify_content, css_data.to_string_justify_content, css_data.keyword_to_justify_content)
+                                           css_data.to_keyword_justify_content, css_data.to_string_justify_content, css_data.keyword_to_justify_content)
     try dump_enum[css_data.JustifyItems](out, "JustifyItems", 15, justify_items_from_int, justify_items_to_int,
-        css_data.to_keyword_justify_items, css_data.to_string_justify_items, css_data.keyword_to_justify_items)
+                                         css_data.to_keyword_justify_items, css_data.to_string_justify_items, css_data.keyword_to_justify_items)
     try dump_enum[css_data.JustifySelf](out, "JustifySelf", 15, justify_self_from_int, justify_self_to_int,
-        css_data.to_keyword_justify_self, css_data.to_string_justify_self, css_data.keyword_to_justify_self)
+                                        css_data.to_keyword_justify_self, css_data.to_string_justify_self, css_data.keyword_to_justify_self)
     try dump_enum[css_data.LineStyle](out, "LineStyle", 10, line_style_from_int, line_style_to_int,
-        css_data.to_keyword_line_style, css_data.to_string_line_style, css_data.keyword_to_line_style)
+                                      css_data.to_keyword_line_style, css_data.to_string_line_style, css_data.keyword_to_line_style)
     try dump_enum[css_data.LineWidth](out, "LineWidth", 3, line_width_from_int, line_width_to_int,
-        css_data.to_keyword_line_width, css_data.to_string_line_width, css_data.keyword_to_line_width)
+                                      css_data.to_keyword_line_width, css_data.to_string_line_width, css_data.keyword_to_line_width)
     try dump_enum[css_data.ListStylePosition](out, "ListStylePosition", 2, list_style_position_from_int, list_style_position_to_int,
-        css_data.to_keyword_list_style_position, css_data.to_string_list_style_position, css_data.keyword_to_list_style_position)
+                                              css_data.to_keyword_list_style_position, css_data.to_string_list_style_position, css_data.keyword_to_list_style_position)
     try dump_enum[css_data.MaskType](out, "MaskType", 2, mask_type_from_int, mask_type_to_int,
-        css_data.to_keyword_mask_type, css_data.to_string_mask_type, css_data.keyword_to_mask_type)
+                                     css_data.to_keyword_mask_type, css_data.to_string_mask_type, css_data.keyword_to_mask_type)
     try dump_enum[css_data.MaskingMode](out, "MaskingMode", 3, masking_mode_from_int, masking_mode_to_int,
-        css_data.to_keyword_masking_mode, css_data.to_string_masking_mode, css_data.keyword_to_masking_mode)
+                                        css_data.to_keyword_masking_mode, css_data.to_string_masking_mode, css_data.keyword_to_masking_mode)
     try dump_enum[css_data.MathShift](out, "MathShift", 2, math_shift_from_int, math_shift_to_int,
-        css_data.to_keyword_math_shift, css_data.to_string_math_shift, css_data.keyword_to_math_shift)
+                                      css_data.to_keyword_math_shift, css_data.to_string_math_shift, css_data.keyword_to_math_shift)
     try dump_enum[css_data.MathStyle](out, "MathStyle", 2, math_style_from_int, math_style_to_int,
-        css_data.to_keyword_math_style, css_data.to_string_math_style, css_data.keyword_to_math_style)
+                                      css_data.to_keyword_math_style, css_data.to_string_math_style, css_data.keyword_to_math_style)
     try dump_enum[css_data.MixBlendMode](out, "MixBlendMode", 18, mix_blend_mode_from_int, mix_blend_mode_to_int,
-        css_data.to_keyword_mix_blend_mode, css_data.to_string_mix_blend_mode, css_data.keyword_to_mix_blend_mode)
+                                         css_data.to_keyword_mix_blend_mode, css_data.to_string_mix_blend_mode, css_data.keyword_to_mix_blend_mode)
     try dump_enum[css_data.NumericFigureValue](out, "NumericFigureValue", 2, numeric_figure_value_from_int, numeric_figure_value_to_int,
-        css_data.to_keyword_numeric_figure_value, css_data.to_string_numeric_figure_value, css_data.keyword_to_numeric_figure_value)
+                                               css_data.to_keyword_numeric_figure_value, css_data.to_string_numeric_figure_value, css_data.keyword_to_numeric_figure_value)
     try dump_enum[css_data.NumericFractionValue](out, "NumericFractionValue", 2, numeric_fraction_value_from_int, numeric_fraction_value_to_int,
-        css_data.to_keyword_numeric_fraction_value, css_data.to_string_numeric_fraction_value, css_data.keyword_to_numeric_fraction_value)
+                                                 css_data.to_keyword_numeric_fraction_value, css_data.to_string_numeric_fraction_value, css_data.keyword_to_numeric_fraction_value)
     try dump_enum[css_data.NumericSpacingValue](out, "NumericSpacingValue", 2, numeric_spacing_value_from_int, numeric_spacing_value_to_int,
-        css_data.to_keyword_numeric_spacing_value, css_data.to_string_numeric_spacing_value, css_data.keyword_to_numeric_spacing_value)
+                                                css_data.to_keyword_numeric_spacing_value, css_data.to_string_numeric_spacing_value, css_data.keyword_to_numeric_spacing_value)
     try dump_enum[css_data.ObjectFit](out, "ObjectFit", 5, object_fit_from_int, object_fit_to_int,
-        css_data.to_keyword_object_fit, css_data.to_string_object_fit, css_data.keyword_to_object_fit)
+                                      css_data.to_keyword_object_fit, css_data.to_string_object_fit, css_data.keyword_to_object_fit)
     try dump_enum[css_data.OutlineStyle](out, "OutlineStyle", 10, outline_style_from_int, outline_style_to_int,
-        css_data.to_keyword_outline_style, css_data.to_string_outline_style, css_data.keyword_to_outline_style)
+                                         css_data.to_keyword_outline_style, css_data.to_string_outline_style, css_data.keyword_to_outline_style)
     try dump_enum[css_data.Overflow](out, "Overflow", 5, overflow_from_int, overflow_to_int,
-        css_data.to_keyword_overflow, css_data.to_string_overflow, css_data.keyword_to_overflow)
+                                     css_data.to_keyword_overflow, css_data.to_string_overflow, css_data.keyword_to_overflow)
     try dump_enum[css_data.PageSize](out, "PageSize", 10, page_size_from_int, page_size_to_int,
-        css_data.to_keyword_page_size, css_data.to_string_page_size, css_data.keyword_to_page_size)
+                                     css_data.to_keyword_page_size, css_data.to_string_page_size, css_data.keyword_to_page_size)
     try dump_enum[css_data.PaintOrder](out, "PaintOrder", 3, paint_order_from_int, paint_order_to_int,
-        css_data.to_keyword_paint_order, css_data.to_string_paint_order, css_data.keyword_to_paint_order)
+                                       css_data.to_keyword_paint_order, css_data.to_string_paint_order, css_data.keyword_to_paint_order)
     try dump_enum[css_data.PointerEvents](out, "PointerEvents", 3, pointer_events_from_int, pointer_events_to_int,
-        css_data.to_keyword_pointer_events, css_data.to_string_pointer_events, css_data.keyword_to_pointer_events)
+                                          css_data.to_keyword_pointer_events, css_data.to_string_pointer_events, css_data.keyword_to_pointer_events)
     try dump_enum[css_data.PolarColorSpace](out, "PolarColorSpace", 4, polar_color_space_from_int, polar_color_space_to_int,
-        css_data.to_keyword_polar_color_space, css_data.to_string_polar_color_space, css_data.keyword_to_polar_color_space)
+                                            css_data.to_keyword_polar_color_space, css_data.to_string_polar_color_space, css_data.keyword_to_polar_color_space)
     try dump_enum[css_data.PositionArea](out, "PositionArea", 50, position_area_from_int, position_area_to_int,
-        css_data.to_keyword_position_area, css_data.to_string_position_area, css_data.keyword_to_position_area)
+                                         css_data.to_keyword_position_area, css_data.to_string_position_area, css_data.keyword_to_position_area)
     try dump_enum[css_data.PositionEdge](out, "PositionEdge", 5, position_edge_from_int, position_edge_to_int,
-        css_data.to_keyword_position_edge, css_data.to_string_position_edge, css_data.keyword_to_position_edge)
+                                         css_data.to_keyword_position_edge, css_data.to_string_position_edge, css_data.keyword_to_position_edge)
     try dump_enum[css_data.Positioning](out, "Positioning", 5, positioning_from_int, positioning_to_int,
-        css_data.to_keyword_positioning, css_data.to_string_positioning, css_data.keyword_to_positioning)
+                                        css_data.to_keyword_positioning, css_data.to_string_positioning, css_data.keyword_to_positioning)
     try dump_enum[css_data.RadialExtent](out, "RadialExtent", 4, radial_extent_from_int, radial_extent_to_int,
-        css_data.to_keyword_radial_extent, css_data.to_string_radial_extent, css_data.keyword_to_radial_extent)
+                                         css_data.to_keyword_radial_extent, css_data.to_string_radial_extent, css_data.keyword_to_radial_extent)
     try dump_enum[css_data.RectangularColorSpace](out, "RectangularColorSpace", 12, rectangular_color_space_from_int, rectangular_color_space_to_int,
-        css_data.to_keyword_rectangular_color_space, css_data.to_string_rectangular_color_space, css_data.keyword_to_rectangular_color_space)
+                                                  css_data.to_keyword_rectangular_color_space, css_data.to_string_rectangular_color_space, css_data.keyword_to_rectangular_color_space)
     try dump_enum[css_data.ReferrerPolicyModifierValue](out, "ReferrerPolicyModifierValue", 8, referrer_policy_modifier_value_from_int, referrer_policy_modifier_value_to_int,
-        css_data.to_keyword_referrer_policy_modifier_value, css_data.to_string_referrer_policy_modifier_value, css_data.keyword_to_referrer_policy_modifier_value)
+                                                        css_data.to_keyword_referrer_policy_modifier_value, css_data.to_string_referrer_policy_modifier_value, css_data.keyword_to_referrer_policy_modifier_value)
     try dump_enum[css_data.RelativeSize](out, "RelativeSize", 2, relative_size_from_int, relative_size_to_int,
-        css_data.to_keyword_relative_size, css_data.to_string_relative_size, css_data.keyword_to_relative_size)
+                                         css_data.to_keyword_relative_size, css_data.to_string_relative_size, css_data.keyword_to_relative_size)
     try dump_enum[css_data.Repetition](out, "Repetition", 4, repetition_from_int, repetition_to_int,
-        css_data.to_keyword_repetition, css_data.to_string_repetition, css_data.keyword_to_repetition)
+                                       css_data.to_keyword_repetition, css_data.to_string_repetition, css_data.keyword_to_repetition)
     try dump_enum[css_data.Resize](out, "Resize", 6, resize_from_int, resize_to_int,
-        css_data.to_keyword_resize, css_data.to_string_resize, css_data.keyword_to_resize)
+                                   css_data.to_keyword_resize, css_data.to_string_resize, css_data.keyword_to_resize)
     try dump_enum[css_data.RoundingStrategy](out, "RoundingStrategy", 4, rounding_strategy_from_int, rounding_strategy_to_int,
-        css_data.to_keyword_rounding_strategy, css_data.to_string_rounding_strategy, css_data.keyword_to_rounding_strategy)
+                                             css_data.to_keyword_rounding_strategy, css_data.to_string_rounding_strategy, css_data.keyword_to_rounding_strategy)
     try dump_enum[css_data.ScrollbarGutter](out, "ScrollbarGutter", 3, scrollbar_gutter_from_int, scrollbar_gutter_to_int,
-        css_data.to_keyword_scrollbar_gutter, css_data.to_string_scrollbar_gutter, css_data.keyword_to_scrollbar_gutter)
+                                            css_data.to_keyword_scrollbar_gutter, css_data.to_string_scrollbar_gutter, css_data.keyword_to_scrollbar_gutter)
     try dump_enum[css_data.ScrollbarWidth](out, "ScrollbarWidth", 3, scrollbar_width_from_int, scrollbar_width_to_int,
-        css_data.to_keyword_scrollbar_width, css_data.to_string_scrollbar_width, css_data.keyword_to_scrollbar_width)
+                                           css_data.to_keyword_scrollbar_width, css_data.to_string_scrollbar_width, css_data.keyword_to_scrollbar_width)
     try dump_enum[css_data.Scroller](out, "Scroller", 3, scroller_from_int, scroller_to_int,
-        css_data.to_keyword_scroller, css_data.to_string_scroller, css_data.keyword_to_scroller)
+                                     css_data.to_keyword_scroller, css_data.to_string_scroller, css_data.keyword_to_scroller)
     try dump_enum[css_data.ShapeBox](out, "ShapeBox", 4, shape_box_from_int, shape_box_to_int,
-        css_data.to_keyword_shape_box, css_data.to_string_shape_box, css_data.keyword_to_shape_box)
+                                     css_data.to_keyword_shape_box, css_data.to_string_shape_box, css_data.keyword_to_shape_box)
     try dump_enum[css_data.ShapeRendering](out, "ShapeRendering", 4, shape_rendering_from_int, shape_rendering_to_int,
-        css_data.to_keyword_shape_rendering, css_data.to_string_shape_rendering, css_data.keyword_to_shape_rendering)
+                                           css_data.to_keyword_shape_rendering, css_data.to_string_shape_rendering, css_data.keyword_to_shape_rendering)
     try dump_enum[css_data.StepPosition](out, "StepPosition", 6, step_position_from_int, step_position_to_int,
-        css_data.to_keyword_step_position, css_data.to_string_step_position, css_data.keyword_to_step_position)
+                                         css_data.to_keyword_step_position, css_data.to_string_step_position, css_data.keyword_to_step_position)
     try dump_enum[css_data.StrokeLinecap](out, "StrokeLinecap", 3, stroke_linecap_from_int, stroke_linecap_to_int,
-        css_data.to_keyword_stroke_linecap, css_data.to_string_stroke_linecap, css_data.keyword_to_stroke_linecap)
+                                          css_data.to_keyword_stroke_linecap, css_data.to_string_stroke_linecap, css_data.keyword_to_stroke_linecap)
     try dump_enum[css_data.StrokeLinejoin](out, "StrokeLinejoin", 3, stroke_linejoin_from_int, stroke_linejoin_to_int,
-        css_data.to_keyword_stroke_linejoin, css_data.to_string_stroke_linejoin, css_data.keyword_to_stroke_linejoin)
+                                           css_data.to_keyword_stroke_linejoin, css_data.to_string_stroke_linejoin, css_data.keyword_to_stroke_linejoin)
     try dump_enum[css_data.SymbolsType](out, "SymbolsType", 5, symbols_type_from_int, symbols_type_to_int,
-        css_data.to_keyword_symbols_type, css_data.to_string_symbols_type, css_data.keyword_to_symbols_type)
+                                        css_data.to_keyword_symbols_type, css_data.to_string_symbols_type, css_data.keyword_to_symbols_type)
     try dump_enum[css_data.TableLayout](out, "TableLayout", 2, table_layout_from_int, table_layout_to_int,
-        css_data.to_keyword_table_layout, css_data.to_string_table_layout, css_data.keyword_to_table_layout)
+                                        css_data.to_keyword_table_layout, css_data.to_string_table_layout, css_data.keyword_to_table_layout)
     try dump_enum[css_data.TextAlign](out, "TextAlign", 11, text_align_from_int, text_align_to_int,
-        css_data.to_keyword_text_align, css_data.to_string_text_align, css_data.keyword_to_text_align)
+                                      css_data.to_keyword_text_align, css_data.to_string_text_align, css_data.keyword_to_text_align)
     try dump_enum[css_data.TextAnchor](out, "TextAnchor", 3, text_anchor_from_int, text_anchor_to_int,
-        css_data.to_keyword_text_anchor, css_data.to_string_text_anchor, css_data.keyword_to_text_anchor)
+                                       css_data.to_keyword_text_anchor, css_data.to_string_text_anchor, css_data.keyword_to_text_anchor)
     try dump_enum[css_data.TextDecorationLine](out, "TextDecorationLine", 7, text_decoration_line_from_int, text_decoration_line_to_int,
-        css_data.to_keyword_text_decoration_line, css_data.to_string_text_decoration_line, css_data.keyword_to_text_decoration_line)
+                                               css_data.to_keyword_text_decoration_line, css_data.to_string_text_decoration_line, css_data.keyword_to_text_decoration_line)
     try dump_enum[css_data.TextDecorationSkipInk](out, "TextDecorationSkipInk", 3, text_decoration_skip_ink_from_int, text_decoration_skip_ink_to_int,
-        css_data.to_keyword_text_decoration_skip_ink, css_data.to_string_text_decoration_skip_ink, css_data.keyword_to_text_decoration_skip_ink)
+                                                  css_data.to_keyword_text_decoration_skip_ink, css_data.to_string_text_decoration_skip_ink, css_data.keyword_to_text_decoration_skip_ink)
     try dump_enum[css_data.TextDecorationStyle](out, "TextDecorationStyle", 5, text_decoration_style_from_int, text_decoration_style_to_int,
-        css_data.to_keyword_text_decoration_style, css_data.to_string_text_decoration_style, css_data.keyword_to_text_decoration_style)
+                                                css_data.to_keyword_text_decoration_style, css_data.to_string_text_decoration_style, css_data.keyword_to_text_decoration_style)
     try dump_enum[css_data.TextJustify](out, "TextJustify", 4, text_justify_from_int, text_justify_to_int,
-        css_data.to_keyword_text_justify, css_data.to_string_text_justify, css_data.keyword_to_text_justify)
+                                        css_data.to_keyword_text_justify, css_data.to_string_text_justify, css_data.keyword_to_text_justify)
     try dump_enum[css_data.TextOverflow](out, "TextOverflow", 2, text_overflow_from_int, text_overflow_to_int,
-        css_data.to_keyword_text_overflow, css_data.to_string_text_overflow, css_data.keyword_to_text_overflow)
+                                         css_data.to_keyword_text_overflow, css_data.to_string_text_overflow, css_data.keyword_to_text_overflow)
     try dump_enum[css_data.TextRendering](out, "TextRendering", 4, text_rendering_from_int, text_rendering_to_int,
-        css_data.to_keyword_text_rendering, css_data.to_string_text_rendering, css_data.keyword_to_text_rendering)
+                                          css_data.to_keyword_text_rendering, css_data.to_string_text_rendering, css_data.keyword_to_text_rendering)
     try dump_enum[css_data.TextTransform](out, "TextTransform", 7, text_transform_from_int, text_transform_to_int,
-        css_data.to_keyword_text_transform, css_data.to_string_text_transform, css_data.keyword_to_text_transform)
+                                          css_data.to_keyword_text_transform, css_data.to_string_text_transform, css_data.keyword_to_text_transform)
     try dump_enum[css_data.TextUnderlinePositionHorizontal](out, "TextUnderlinePositionHorizontal", 3, text_underline_position_horizontal_from_int, text_underline_position_horizontal_to_int,
-        css_data.to_keyword_text_underline_position_horizo, css_data.to_string_text_underline_position_horizo, css_data.keyword_to_text_underline_position_horizontal)
+                                                            css_data.to_keyword_text_underline_position_horizo, css_data.to_string_text_underline_position_horizo, css_data.keyword_to_text_underline_position_horizontal)
     try dump_enum[css_data.TextUnderlinePositionVertical](out, "TextUnderlinePositionVertical", 3, text_underline_position_vertical_from_int, text_underline_position_vertical_to_int,
-        css_data.to_keyword_text_underline_position_vertic, css_data.to_string_text_underline_position_vertic, css_data.keyword_to_text_underline_position_vertical)
+                                                          css_data.to_keyword_text_underline_position_vertic, css_data.to_string_text_underline_position_vertic, css_data.keyword_to_text_underline_position_vertical)
     try dump_enum[css_data.TextWrapMode](out, "TextWrapMode", 2, text_wrap_mode_from_int, text_wrap_mode_to_int,
-        css_data.to_keyword_text_wrap_mode, css_data.to_string_text_wrap_mode, css_data.keyword_to_text_wrap_mode)
+                                         css_data.to_keyword_text_wrap_mode, css_data.to_string_text_wrap_mode, css_data.keyword_to_text_wrap_mode)
     try dump_enum[css_data.TextWrapStyle](out, "TextWrapStyle", 4, text_wrap_style_from_int, text_wrap_style_to_int,
-        css_data.to_keyword_text_wrap_style, css_data.to_string_text_wrap_style, css_data.keyword_to_text_wrap_style)
+                                          css_data.to_keyword_text_wrap_style, css_data.to_string_text_wrap_style, css_data.keyword_to_text_wrap_style)
     try dump_enum[css_data.TouchAction](out, "TouchAction", 9, touch_action_from_int, touch_action_to_int,
-        css_data.to_keyword_touch_action, css_data.to_string_touch_action, css_data.keyword_to_touch_action)
+                                        css_data.to_keyword_touch_action, css_data.to_string_touch_action, css_data.keyword_to_touch_action)
     try dump_enum[css_data.TransformBox](out, "TransformBox", 5, transform_box_from_int, transform_box_to_int,
-        css_data.to_keyword_transform_box, css_data.to_string_transform_box, css_data.keyword_to_transform_box)
+                                         css_data.to_keyword_transform_box, css_data.to_string_transform_box, css_data.keyword_to_transform_box)
     try dump_enum[css_data.TransformStyle](out, "TransformStyle", 2, transform_style_from_int, transform_style_to_int,
-        css_data.to_keyword_transform_style, css_data.to_string_transform_style, css_data.keyword_to_transform_style)
+                                           css_data.to_keyword_transform_style, css_data.to_string_transform_style, css_data.keyword_to_transform_style)
     try dump_enum[css_data.TransitionBehavior](out, "TransitionBehavior", 2, transition_behavior_from_int, transition_behavior_to_int,
-        css_data.to_keyword_transition_behavior, css_data.to_string_transition_behavior, css_data.keyword_to_transition_behavior)
+                                               css_data.to_keyword_transition_behavior, css_data.to_string_transition_behavior, css_data.keyword_to_transition_behavior)
     try dump_enum[css_data.TryOrder](out, "TryOrder", 4, try_order_from_int, try_order_to_int,
-        css_data.to_keyword_try_order, css_data.to_string_try_order, css_data.keyword_to_try_order)
+                                     css_data.to_keyword_try_order, css_data.to_string_try_order, css_data.keyword_to_try_order)
     try dump_enum[css_data.TryTactic](out, "TryTactic", 3, try_tactic_from_int, try_tactic_to_int,
-        css_data.to_keyword_try_tactic, css_data.to_string_try_tactic, css_data.keyword_to_try_tactic)
+                                      css_data.to_keyword_try_tactic, css_data.to_string_try_tactic, css_data.keyword_to_try_tactic)
     try dump_enum[css_data.UnicodeBidi](out, "UnicodeBidi", 6, unicode_bidi_from_int, unicode_bidi_to_int,
-        css_data.to_keyword_unicode_bidi, css_data.to_string_unicode_bidi, css_data.keyword_to_unicode_bidi)
+                                        css_data.to_keyword_unicode_bidi, css_data.to_string_unicode_bidi, css_data.keyword_to_unicode_bidi)
     try dump_enum[css_data.UserSelect](out, "UserSelect", 5, user_select_from_int, user_select_to_int,
-        css_data.to_keyword_user_select, css_data.to_string_user_select, css_data.keyword_to_user_select)
+                                       css_data.to_keyword_user_select, css_data.to_string_user_select, css_data.keyword_to_user_select)
     try dump_enum[css_data.VerticalAlign](out, "VerticalAlign", 8, vertical_align_from_int, vertical_align_to_int,
-        css_data.to_keyword_vertical_align, css_data.to_string_vertical_align, css_data.keyword_to_vertical_align)
+                                          css_data.to_keyword_vertical_align, css_data.to_string_vertical_align, css_data.keyword_to_vertical_align)
     try dump_enum[css_data.Visibility](out, "Visibility", 3, visibility_from_int, visibility_to_int,
-        css_data.to_keyword_visibility, css_data.to_string_visibility, css_data.keyword_to_visibility)
+                                       css_data.to_keyword_visibility, css_data.to_string_visibility, css_data.keyword_to_visibility)
     try dump_enum[css_data.WhiteSpace](out, "WhiteSpace", 4, white_space_from_int, white_space_to_int,
-        css_data.to_keyword_white_space, css_data.to_string_white_space, css_data.keyword_to_white_space)
+                                       css_data.to_keyword_white_space, css_data.to_string_white_space, css_data.keyword_to_white_space)
     try dump_enum[css_data.WhiteSpaceCollapse](out, "WhiteSpaceCollapse", 6, white_space_collapse_from_int, white_space_collapse_to_int,
-        css_data.to_keyword_white_space_collapse, css_data.to_string_white_space_collapse, css_data.keyword_to_white_space_collapse)
+                                               css_data.to_keyword_white_space_collapse, css_data.to_string_white_space_collapse, css_data.keyword_to_white_space_collapse)
     try dump_enum[css_data.WordBreak](out, "WordBreak", 4, word_break_from_int, word_break_to_int,
-        css_data.to_keyword_word_break, css_data.to_string_word_break, css_data.keyword_to_word_break)
+                                      css_data.to_keyword_word_break, css_data.to_string_word_break, css_data.keyword_to_word_break)
     try dump_enum[css_data.WritingMode](out, "WritingMode", 5, writing_mode_from_int, writing_mode_to_int,
-        css_data.to_keyword_writing_mode, css_data.to_string_writing_mode, css_data.keyword_to_writing_mode)
+                                        css_data.to_keyword_writing_mode, css_data.to_string_writing_mode, css_data.keyword_to_writing_mode)
 
 # mark: Conversions between the enums of Enums.json and integers ================================
 
@@ -1135,17 +1135,17 @@ let physical_properties: css_data.PropertyId[44] = [
 ## which units are compatible, with their ratios.
 func dump_units(out: Out*) -> !:
     try dump_unit[css_data.AngleUnit](out, "angle", 4, angle_unit_from_int, angle_unit_to_int, css_data.canonical_angle_unit,
-        css_data.to_string_angle_unit, css_data.units_are_compatible_angle_unit, css_data.ratio_between_units_angle_unit)
+                                      css_data.to_string_angle_unit, css_data.units_are_compatible_angle_unit, css_data.ratio_between_units_angle_unit)
     try dump_unit[css_data.FlexUnit](out, "flex", 1, flex_unit_from_int, flex_unit_to_int, css_data.canonical_flex_unit,
-        css_data.to_string_flex_unit, css_data.units_are_compatible_flex_unit, css_data.ratio_between_units_flex_unit)
+                                     css_data.to_string_flex_unit, css_data.units_are_compatible_flex_unit, css_data.ratio_between_units_flex_unit)
     try dump_unit[css_data.FrequencyUnit](out, "frequency", 2, frequency_unit_from_int, frequency_unit_to_int, css_data.canonical_frequency_unit,
-        css_data.to_string_frequency_unit, css_data.units_are_compatible_frequency_unit, css_data.ratio_between_units_frequency_unit)
+                                          css_data.to_string_frequency_unit, css_data.units_are_compatible_frequency_unit, css_data.ratio_between_units_frequency_unit)
     try dump_unit[css_data.LengthUnit](out, "length", 43, length_unit_from_int, length_unit_to_int, css_data.canonical_length_unit,
-        css_data.to_string_length_unit, css_data.units_are_compatible_length_unit, css_data.ratio_between_units_length_unit)
+                                       css_data.to_string_length_unit, css_data.units_are_compatible_length_unit, css_data.ratio_between_units_length_unit)
     try dump_unit[css_data.ResolutionUnit](out, "resolution", 4, resolution_unit_from_int, resolution_unit_to_int, css_data.canonical_resolution_unit,
-        css_data.to_string_resolution_unit, css_data.units_are_compatible_resolution_unit, css_data.ratio_between_units_resolution_unit)
+                                           css_data.to_string_resolution_unit, css_data.units_are_compatible_resolution_unit, css_data.ratio_between_units_resolution_unit)
     try dump_unit[css_data.TimeUnit](out, "time", 2, time_unit_from_int, time_unit_to_int, css_data.canonical_time_unit,
-        css_data.to_string_time_unit, css_data.units_are_compatible_time_unit, css_data.ratio_between_units_time_unit)
+                                     css_data.to_string_time_unit, css_data.units_are_compatible_time_unit, css_data.ratio_between_units_time_unit)
     for value in 0..<length_unit_count:
         let unit_ = (css_data.LengthUnit)(u8)value
         try out.p(f"len {value} ")

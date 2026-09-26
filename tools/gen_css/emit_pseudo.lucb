@@ -29,7 +29,7 @@ func pseudo_class_parameter_type(argument: str) -> str?:
 func emit_pseudo_class(pseudo_classes_data: const Json*) -> str!:
     var out = try Out.create()
     try put_generated_header(&out, "generated_pseudo_class", "the CSS pseudo-classes",
-        ["PseudoClass.h", "PseudoClass.cpp"], "generate_libweb_css_pseudo_class.py", "PseudoClasses.json", no_notes())
+                             ["PseudoClass.h", "PseudoClass.cpp"], "generate_libweb_css_pseudo_class.py", "PseudoClasses.json", no_notes())
     try out.blank()
     var titles = try StrList.create()
     for index in 0..<pseudo_classes_data.count:
@@ -48,11 +48,11 @@ func emit_pseudo_class(pseudo_classes_data: const Json*) -> str!:
     try out.blank()
     var parameter_types = try StrList.create()
     for name in ["None", "ANPlusB", "ANPlusBOf", "CompoundSelector", "ForgivingSelectorList",
-            "ForgivingRelativeSelectorList", "Ident", "LanguageRanges", "LevelList", "RelativeSelectorList",
-            "SelectorList"]:
+                 "ForgivingRelativeSelectorList", "Ident", "LanguageRanges", "LevelList", "RelativeSelectorList",
+                 "SelectorList"]:
         try parameter_types.append(name)
     try put_enum(&out, "Web::CSS::PseudoClassMetadata::ParameterType", "PseudoClass.h",
-        "PseudoClassMetadataParameterType", "i32", &parameter_types)
+                 "PseudoClassMetadataParameterType", "i32", &parameter_types)
 
     try put_mark(&out, "PseudoClass.cpp")
     try put_ported(&out, "PseudoClass.cpp", "Web::CSS::pseudo_class_from_string")
@@ -129,8 +129,8 @@ func get_flag(value: const Json*, name: str) -> bool:
 func emit_pseudo_element(pseudo_elements_data: const Json*) -> str!:
     var out = try Out.create()
     try put_generated_header(&out, "generated_pseudo_element", "the CSS pseudo-elements",
-        ["PseudoElement.h", "PseudoElement.cpp"], "generate_libweb_css_pseudo_element.py", "PseudoElements.json",
-        no_notes())
+                             ["PseudoElement.h", "PseudoElement.cpp"], "generate_libweb_css_pseudo_element.py", "PseudoElements.json",
+                             no_notes())
     try out.blank()
     var titles = try StrList.create()
     for index in 0..<pseudo_elements_data.count:
@@ -140,7 +140,7 @@ func emit_pseudo_element(pseudo_elements_data: const Json*) -> str!:
     try titles.append("KnownPseudoElementCount")
     try titles.append("UnknownWebKit")
     try put_enum(&out, "Web::CSS::PseudoElement", "PseudoElement.h", "PseudoElement",
-        underlying_type_for_enum(pseudo_elements_data.count), &titles)
+                 underlying_type_for_enum(pseudo_elements_data.count), &titles)
 
     try put_mark(&out, "PseudoElementMetadata")
     try put_doc(&out, "Web::CSS::PseudoElementMetadata", "PseudoElement.h")
@@ -153,7 +153,7 @@ func emit_pseudo_element(pseudo_elements_data: const Json*) -> str!:
     for name in ["None", "CompoundSelector", "IdentList", "PTNameSelector"]:
         try parameter_types.append(name)
     try put_enum(&out, "Web::CSS::PseudoElementMetadata::ParameterType", "PseudoElement.h",
-        "PseudoElementMetadataParameterType", "i32", &parameter_types)
+                 "PseudoElementMetadataParameterType", "i32", &parameter_types)
 
     try put_mark(&out, "PseudoElement.cpp")
     try put_ported(&out, "PseudoElement.cpp", "Web::CSS::pseudo_element_from_string")

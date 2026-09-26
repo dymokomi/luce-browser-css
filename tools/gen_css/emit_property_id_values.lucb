@@ -24,10 +24,10 @@ func emit_property_id_2(data: PropertyData*) -> str!:
     let properties = data.properties
     var out = try Out.create()
     try put_generated_header(&out, "generated_property_id_2", "the CSS properties: values",
-        ["PropertyID.cpp"], "generate_libweb_css_property_id.py",
-        "Properties.json, Enums.json and LogicalPropertyGroups.json",
-        ["Multiplicity, quirks, accepted keywords and the integer and number ranges; continued from",
-            "generated_property_id."])
+                             ["PropertyID.cpp"], "generate_libweb_css_property_id.py",
+                             "Properties.json, Enums.json and LogicalPropertyGroups.json",
+                             ["Multiplicity, quirks, accepted keywords and the integer and number ranges; continued from",
+                              "generated_property_id."])
     try out.blank()
 
     try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_multiplicity")

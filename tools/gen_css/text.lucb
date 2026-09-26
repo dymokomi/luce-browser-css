@@ -214,16 +214,16 @@ func overload_suffix(type_name: str) -> str!:
 
 ## The reserved and core words of luce-base and the standard module names (names.py).
 let reserved_words: str[53] = ["alloc", "and", "as", "asm", "break", "catch", "const", "continue",
-    "defer", "elif", "else", "enum", "errdefer", "export", "extern", "false", "for", "free", "from",
-    "func", "goto", "if", "import", "in", "interface", "let", "local", "match", "mutating", "new",
-    "none", "not", "or", "pub", "recover", "return", "self", "static", "struct", "test", "true",
-    "try", "type", "union", "var", "volatile", "while", "with", "class", "spawn", "assert",
-    "discard", "error"]
+                               "defer", "elif", "else", "enum", "errdefer", "export", "extern", "false", "for", "free", "from",
+                               "func", "goto", "if", "import", "in", "interface", "let", "local", "match", "mutating", "new",
+                               "none", "not", "or", "pub", "recover", "return", "self", "static", "struct", "test", "true",
+                               "try", "type", "union", "var", "volatile", "while", "with", "class", "spawn", "assert",
+                               "discard", "error"]
 let core_words: str[32] = ["trap", "hash", "print", "format", "sizeof", "alignof", "offsetof", "hex",
-    "bin", "pad", "bool", "i8", "i16", "i32", "i64", "isize", "u8", "u16", "u32", "u64", "usize",
-    "f16", "f32", "f64", "char", "str", "unit", "never", "void", "fmt", "Error", "ErrorCode"]
+                           "bin", "pad", "bool", "i8", "i16", "i32", "i64", "isize", "u8", "u16", "u32", "u64", "usize",
+                           "f16", "f32", "f64", "char", "str", "unit", "never", "void", "fmt", "Error", "ErrorCode"]
 let std_module_words: str[10] = ["memory", "io", "os", "thread", "sync", "atomic", "c", "testing",
-    "runtime", "luce"]
+                                 "runtime", "luce"]
 
 ## names.py's `safe`: a reserved or core word takes a trailing `_`.
 func luce_safe(name: str) -> str!:

@@ -148,7 +148,7 @@ func dump_properties(out: Out*) -> !:
         for writing_mode in 0..<5:
             for direction in 0..<2:
                 let context = css_data.LogicalAliasMappingContext(writing_mode = (css_data.WritingMode)(u8)writing_mode,
-                    direction = (css_data.Direction)(u8)direction)
+                                                                  direction = (css_data.Direction)(u8)direction)
                 try out.p(f" {property_int(css_data.map_physical_property_to_logical_alias(id, context))}")
         try out.p("\n")
     for index in 0..<property_count:
@@ -249,7 +249,7 @@ func dump_property(out: Out*, index: u64, id: css_data.PropertyId) -> !:
     for writing_mode in 0..<5:
         for direction in 0..<2:
             let context = css_data.LogicalAliasMappingContext(writing_mode = (css_data.WritingMode)(u8)writing_mode,
-                direction = (css_data.Direction)(u8)direction)
+                                                              direction = (css_data.Direction)(u8)direction)
             try out.p(f" {property_int(css_data.map_logical_alias_to_physical_property(id, context))}")
     try out.p("\n")
 
@@ -363,8 +363,8 @@ func dump_small(out: Out*) -> !:
 ## For one dimension with `count` units: the canonical unit, each unit's name, and each pair's
 ## compatibility, with the ratio of compatible (and equal) units.
 func dump_unit[E](out: Out*, name: str, count: u64, from_int: func(u64) -> E, to_int: func(E) -> u64,
-        canonical: func() -> E, to_string: func(E) -> ak.FlyString, compatible: func(E, E) -> bool,
-        ratio: func(E, E) -> f64) -> !:
+                  canonical: func() -> E, to_string: func(E) -> ak.FlyString, compatible: func(E, E) -> bool,
+                  ratio: func(E, E) -> f64) -> !:
     try out.p(f"canonical {name} {to_int(canonical())}\n")
     for value in 0..<count:
         try out.p(f"unit {name} {value} ")

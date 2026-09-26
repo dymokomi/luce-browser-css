@@ -204,10 +204,9 @@ func tokenizer_tokenize_filter_code_points(input: ak.StringView, encoding: ak.St
             if code_point == (u32)'\n':
                 if not last_was_carriage_return:
                     ak.string_builder_append_u8(&builder, '\n')
-
             elif code_point == 0x0c:
                 ak.string_builder_append_u8(&builder, '\n')
-                # Replace any U+0000 NULL or surrogate code points in input with U+FFFD REPLACEMENT CHARACTER (�).
+            # Replace any U+0000 NULL or surrogate code points in input with U+FFFD REPLACEMENT CHARACTER (�).
             elif code_point == 0x00 or ak.is_unicode_surrogate(code_point):
                 ak.string_builder_append_code_point(&builder, replacement_character)
             else:

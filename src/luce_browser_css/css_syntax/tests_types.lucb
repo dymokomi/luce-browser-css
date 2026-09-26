@@ -84,9 +84,9 @@ noinline func test_at_rule_walkers():
     reset_reports()
     var all = new_rule_visits()
     at_rule_for_each(&rule,
-        ak.Function1[const AtRule*, unit](call = record_at_rule, context = &all),
-        ak.Function1[const QualifiedRule*, unit](call = record_qualified_rule, context = &all),
-        ak.Function1[const Declaration*, unit](call = record_declaration, context = &all))
+                     ak.Function1[const AtRule*, unit](call = record_at_rule, context = &all),
+                     ak.Function1[const QualifiedRule*, unit](call = record_qualified_rule, context = &all),
+                     ak.Function1[const Declaration*, unit](call = record_declaration, context = &all))
     assert(ak.string_view_text(ak.string_builder_string_view(&all.at_rules)) == "inner;")
     assert(all.qualified_rules == 1)
     assert(ak.string_view_text(ak.string_builder_string_view(&all.declarations)) == "a;b;")
@@ -117,8 +117,8 @@ noinline func test_at_rule_walkers():
     reset_reports()
     var mixed = new_rule_visits()
     at_rule_for_each_as_declaration_rule_list(&rule,
-        ak.Function1[const AtRule*, unit](call = record_at_rule, context = &mixed),
-        ak.Function1[const Declaration*, unit](call = record_declaration, context = &mixed))
+                                              ak.Function1[const AtRule*, unit](call = record_at_rule, context = &mixed),
+                                              ak.Function1[const Declaration*, unit](call = record_declaration, context = &mixed))
     assert(ak.string_view_text(ak.string_builder_string_view(&mixed.at_rules)) == "inner;")
     assert(ak.string_view_text(ak.string_builder_string_view(&mixed.declarations)) == "a;b;")
     assert(reports_text() == "@outer>qualified-rule;")

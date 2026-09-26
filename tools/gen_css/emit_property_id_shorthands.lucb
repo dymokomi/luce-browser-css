@@ -117,11 +117,11 @@ func emit_property_id_3(data: PropertyData*) -> str!:
     let properties = data.properties
     var out = try Out.create()
     try put_generated_header(&out, "generated_property_id_3", "the CSS properties: shorthands and logical properties",
-        ["PropertyID.cpp"], "generate_libweb_css_property_id.py",
-        "Properties.json, Enums.json and LogicalPropertyGroups.json",
-        ["Shorthands and their longhands, the computation order and the logical property mappings;",
-            "continued from generated_property_id_2. The `static Vector<PropertyID>`s are built on first",
-            "use in the C heap."])
+                             ["PropertyID.cpp"], "generate_libweb_css_property_id.py",
+                             "Properties.json, Enums.json and LogicalPropertyGroups.json",
+                             ["Shorthands and their longhands, the computation order and the logical property mappings;",
+                              "continued from generated_property_id_2. The `static Vector<PropertyID>`s are built on first",
+                              "use in the C heap."])
     try out.blank()
 
     try put_ported(&out, "PropertyID.cpp", "Web::CSS::property_is_shorthand")
@@ -266,7 +266,7 @@ func emit_property_id_3(data: PropertyData*) -> str!:
         elif text != "never":
             trap(f"Property '{name}' has unrecognized 'requires-computation' value '{text}'")
     for which in [("inherited", &properties_requiring_inherited), ("initial", &properties_requiring_initial),
-            ("cascaded", &properties_requiring_cascaded)]:
+                  ("cascaded", &properties_requiring_cascaded)]:
         try put_ported(&out, "PropertyID.cpp", try cat(["Web::CSS::property_requires_computation_with_", which.0, "_value"]))
         try out.line(f"pub func property_requires_computation_with_{which.0}_value(property_id: PropertyId) -> bool:")
         try out.line("    match property_id:")
@@ -407,8 +407,8 @@ func emit_map_logical_alias_to_physical_property(out: Out*, data: PropertyData*)
 func emit_corner_mapping(out: Out*, group: const Json*, group_name: str, property_name: str, corners: str[8]) -> !:
     let ltr = "used_direction == Direction.ltr"
     let conditions: str[3] = ["mapping_context.writing_mode == WritingMode.horizontal_tb",
-        "mapping_context.writing_mode == WritingMode.vertical_rl or mapping_context.writing_mode == WritingMode.sideways_rl",
-        "mapping_context.writing_mode == WritingMode.vertical_lr"]
+                              "mapping_context.writing_mode == WritingMode.vertical_rl or mapping_context.writing_mode == WritingMode.sideways_rl",
+                              "mapping_context.writing_mode == WritingMode.vertical_lr"]
     for index in 0..<3:
         try out.line(f"            if {conditions[index]}:")
         try out.line(f"                if {ltr}:")

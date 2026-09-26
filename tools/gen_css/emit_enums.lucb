@@ -19,7 +19,7 @@ func is_enum_alias(member_name: str) -> bool:
 func emit_enums(enums_data: const Json*) -> str!:
     var out = try Out.create()
     try put_generated_header(&out, "generated_enums", "the keyword enums of CSS properties",
-        ["Enums.h", "Enums.cpp"], "generate_libweb_css_enums.py", "Enums.json", no_notes())
+                             ["Enums.h", "Enums.cpp"], "generate_libweb_css_enums.py", "Enums.json", no_notes())
     for enum_index in 0..<enums_data.count:
         let name = enums_data.key(enum_index)
         let value = enums_data.at(enum_index)
@@ -38,7 +38,7 @@ func emit_enums(enums_data: const Json*) -> str!:
                 continue
             try titles.append(try title_casify(member_name))
         try put_enum(&out, try cat(["Web::CSS::", name_titlecase]), "Enums.h", type_name,
-            underlying_type_for_enum(value.count), &titles)
+                     underlying_type_for_enum(value.count), &titles)
         try out.blank()
 
         # keyword_to_X
@@ -98,7 +98,7 @@ func keyword_name(dashy_name: str) -> str!:
 func emit_keyword(keyword_data: const Json*) -> str!:
     var out = try Out.create()
     try put_generated_header(&out, "generated_keyword", "the CSS keywords",
-        ["Keyword.h", "Keyword.cpp"], "generate_libweb_css_keyword.py", "Keywords.json", no_notes())
+                             ["Keyword.h", "Keyword.cpp"], "generate_libweb_css_keyword.py", "Keywords.json", no_notes())
     try out.blank()
 
     var titles = try StrList.create()

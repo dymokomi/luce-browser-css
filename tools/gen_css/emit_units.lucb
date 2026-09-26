@@ -87,14 +87,14 @@ func emit_units(dimensions_data: const Json*) -> str!:
         trap("Units.json is not valid")
     var out = try Out.create()
     try put_generated_header(&out, "generated_units", "the CSS dimensions and their units",
-        ["Units.h", "Units.cpp"], "generate_libweb_css_units.py", "Units.json", no_notes())
+                             ["Units.h", "Units.cpp"], "generate_libweb_css_units.py", "Units.json", no_notes())
     try out.blank()
 
     var dimension_titles = try StrList.create()
     for index in 0..<dimensions_data.count:
         try dimension_titles.append(try title_casify(dimensions_data.key(index)))
     try put_enum(&out, "Web::CSS::DimensionType", "Units.h", "DimensionType",
-        underlying_type_for_enum(dimensions_data.count), &dimension_titles)
+                 underlying_type_for_enum(dimensions_data.count), &dimension_titles)
     try out.blank()
 
     try put_ported(&out, "Units.cpp", "Web::CSS::dimension_for_unit")
@@ -125,7 +125,7 @@ func emit_units(dimensions_data: const Json*) -> str!:
         for unit_index in 0..<units.count:
             try titles.append(try title_casify(units.key(unit_index)))
         try put_enum(&out, try cat(["Web::CSS::", unit_type]), "Units.h", unit_type,
-            underlying_type_for_enum(units.count), &titles)
+                     underlying_type_for_enum(units.count), &titles)
         try out.blank()
 
         try put_ported(&out, "Units.h", try cat(["Web::CSS::canonical_", name_snakecase, "_unit"]))

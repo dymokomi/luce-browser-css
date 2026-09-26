@@ -53,7 +53,7 @@ pub func main(arguments: c.str[]) -> i32!:
     try write_output(output_directory, "generated_enums.lucb", try emit_enums(enums))
     var property_id_outputs = try StrList.create()
     try emit_property_id(try read_json(data_directory, "Properties.json"), enums,
-        try read_json(data_directory, "LogicalPropertyGroups.json"), &property_id_outputs)
+                         try read_json(data_directory, "LogicalPropertyGroups.json"), &property_id_outputs)
     try write_output(output_directory, "generated_property_id.lucb", property_id_outputs.at(0))
     try write_output(output_directory, "generated_property_id_2.lucb", property_id_outputs.at(1))
     try write_output(output_directory, "generated_property_id_3.lucb", property_id_outputs.at(2))

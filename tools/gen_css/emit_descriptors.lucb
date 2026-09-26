@@ -85,8 +85,8 @@ func emit_descriptors(at_rules_data: const Json*) -> str!:
     let all_descriptors = try collect_all_descriptors(at_rules_data)
     var out = try Out.create()
     try put_generated_header(&out, "generated_descriptor_id", "the CSS at-rules and their descriptors",
-        ["DescriptorID.h", "DescriptorID.cpp"], "generate_libweb_css_descriptors.py", "Descriptors.json",
-        ["descriptor_initial_value(), which parses style values, is the engine's."])
+                             ["DescriptorID.h", "DescriptorID.cpp"], "generate_libweb_css_descriptors.py", "Descriptors.json",
+                             ["descriptor_initial_value(), which parses style values, is the engine's."])
     try out.blank()
 
     var at_rule_titles = try StrList.create()
@@ -109,9 +109,9 @@ func emit_descriptors(at_rules_data: const Json*) -> str!:
     var value_types = try StrList.create()
     # FIXME: Parse the grammar instead of hard-coding all the options!
     for name in ["CounterStyleSystem", "CounterStyleAdditiveSymbols", "CounterStyleName", "CounterStyleNegative",
-            "CounterStylePad", "CounterStyleRange", "CropOrCross", "FamilyName", "FontSrcList",
-            "FontWeightAbsolutePair", "Length", "OptionalDeclarationValue", "PageSize", "PositivePercentage",
-            "String", "Symbol", "Symbols", "UnicodeRangeTokens"]:
+                 "CounterStylePad", "CounterStyleRange", "CropOrCross", "FamilyName", "FontSrcList",
+                 "FontWeightAbsolutePair", "Length", "OptionalDeclarationValue", "PageSize", "PositivePercentage",
+                 "String", "Symbol", "Symbols", "UnicodeRangeTokens"]:
         try value_types.append(name)
     try put_enum(&out, "Web::CSS::DescriptorMetadata::ValueType", "DescriptorID.h", "DescriptorMetadataValueType", "i32", &value_types)
 
