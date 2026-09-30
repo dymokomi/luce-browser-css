@@ -377,5 +377,13 @@ func dump_unit[E](out: Out*, name: str, count: u64, from_int: func(u64) -> E, to
             try out.b(is_compatible)
             if is_compatible or a == b:
                 var buffer: u8[64]
-                try out.p(f" {try strings.format_f64(ratio(from_int(a), from_int(b)), buffer)}")
+                try out.p(f" {seventeen_digits(ratio(from_int(a), from_int(b)), buffer)}")
             try out.p("\n")
+
+extern func dump_snprintf as "snprintf"(output: u8*, size: usize, format: c.str, ...) -> i32
+
+## A ratio as the donor's C++ printed it: 17 significant digits (`%.17g`), where the
+## standard library's format_f64 writes the shortest digits that read back.
+func seventeen_digits(value: f64, buffer: u8[]) -> str:
+    let n = dump_snprintf(&buffer[0], buffer.length, "%.17g", value)
+    return (str)buffer[..<(usize)n]
