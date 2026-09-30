@@ -8,8 +8,6 @@
 #       donor: each expected value was printed by Ladybird's generated C++ at 47c82b38d0 (the
 #       local dump that tests/data/css_data_dump.txt holds in full, which test.sh compares).
 #
-#       workaround: compiler-issues/ranges_facts_cubic: every test body is a noinline function.
-#
 #==============================================================================================
 
 # Whether a StringView holds `text`.
@@ -19,9 +17,6 @@ func view_equals(view: ak.StringView, text: str) -> bool:
 # mark: TestCSSIDSpeed.cpp ======================================================================
 
 test "keyword_from_string: basic":
-    keyword_from_string_basic()
-
-noinline func keyword_from_string_basic():
     assert(keyword_from_string(ak.sv("italic")) == Keyword.italic)
     assert(keyword_from_string(ak.sv("inline")) == Keyword.inline)
     assert(keyword_from_string(ak.sv("small")) == Keyword.small)
@@ -33,9 +28,6 @@ noinline func keyword_from_string_basic():
 # mark: TestCSSInheritedProperty.cpp ============================================================
 
 test "is_inherited_property":
-    is_inherited_property_test()
-
-noinline func is_inherited_property_test():
     # Test inherited properties
     assert(is_inherited_property(PropertyId.color))
     assert(is_inherited_property(PropertyId.font_size))
@@ -52,9 +44,6 @@ noinline func is_inherited_property_test():
 # mark: Keywords ================================================================================
 
 test "keywords: names, unknown strings and the CSS-wide keywords":
-    keyword_names()
-
-noinline func keyword_names():
     assert(view_equals(string_from_keyword(Keyword.revert_layer), "revert-layer"))
     assert(view_equals(string_from_keyword(Keyword.negative_infinity), "-infinity"))
     assert(view_equals(string_from_keyword(Keyword.invalid), "(invalid CSS::Keyword)"))
@@ -68,9 +57,6 @@ noinline func keyword_names():
     assert(not is_css_wide_keyword(ak.sv("none")))
 
 test "enums: keyword conversions and names":
-    enum_conversions()
-
-noinline func enum_conversions():
     assert(keyword_to_writing_mode(Keyword.vertical_rl) == WritingMode.vertical_rl)
     assert(keyword_to_writing_mode(Keyword.auto) == none)
     assert(to_keyword_direction(Direction.rtl) == Keyword.rtl)
@@ -82,9 +68,6 @@ noinline func enum_conversions():
 # mark: Properties ==============================================================================
 
 test "properties: from strings, custom properties and legacy aliases":
-    property_from_strings()
-
-noinline func property_from_strings():
     assert(property_id_from_string(ak.sv("MARGIN-TOP")) == PropertyId.margin_top)
     assert(property_id_from_string(ak.sv("marginTop")) == none)
     assert(property_id_from_camel_case_string(ak.sv("marginTop")) == PropertyId.margin_top)
@@ -98,9 +81,6 @@ noinline func property_from_strings():
     assert(is_invalid_custom_property_name_string(ak.sv("--")))
 
 test "properties: names are FlyStrings made once":
-    property_names()
-
-noinline func property_names():
     let name = string_from_property_id(PropertyId.margin_block_start)
     assert(ak.fly_string_eq_string_view(&name, ak.sv("margin-block-start")))
     let again = string_from_property_id(PropertyId.margin_block_start)
@@ -111,9 +91,6 @@ noinline func property_names():
     assert(ak.fly_string_eq_string_view(&custom, ak.sv("(invalid CSS::PropertyID)")))
 
 test "properties: flags, multiplicity, quirks and ranges":
-    property_flags()
-
-noinline func property_flags():
     assert(animation_type_from_longhand_property(PropertyId.margin_top) == AnimationType.by_computed_value)
     assert(animation_type_from_longhand_property(PropertyId.custom) == AnimationType.none_)
     assert(is_animatable_property(PropertyId.border))
@@ -132,9 +109,6 @@ noinline func property_flags():
     assert(number_of_longhand_properties == (usize)((u16)last_longhand_property_id - (u16)first_longhand_property_id + 1))
 
 test "properties: keywords and custom-ident blacklists":
-    property_keywords()
-
-noinline func property_keywords():
     assert(property_accepts_keyword(PropertyId.writing_mode, Keyword.vertical_rl))
     assert(not property_accepts_keyword(PropertyId.writing_mode, Keyword.auto))
     assert(not property_accepts_keyword(PropertyId.margin_top, Keyword.vertical_rl))
@@ -145,9 +119,6 @@ noinline func property_keywords():
     assert(ak.vector_size(&empty) == 0)
 
 test "properties: shorthands and longhands":
-    property_shorthands()
-
-noinline func property_shorthands():
     let longhands = longhands_for_shorthand(PropertyId.margin)
     assert(ak.vector_size(&longhands) == 4)
     assert(*ak.vector_at_const(&longhands, 0) == PropertyId.margin_top)
@@ -168,9 +139,6 @@ noinline func property_shorthands():
     assert(ak.vector_size(&order) == number_of_longhand_properties)
 
 test "properties: logical aliases":
-    property_logical_aliases()
-
-noinline func property_logical_aliases():
     let vertical_rl = LogicalAliasMappingContext(writing_mode = .vertical_rl, direction = .ltr)
     let horizontal = LogicalAliasMappingContext(writing_mode = .horizontal_tb, direction = .rtl)
     assert(property_is_logical_alias(PropertyId.margin_block_start))
@@ -184,9 +152,6 @@ noinline func property_logical_aliases():
 # mark: Descriptors, media features, selectors, transforms, units ==============================
 
 test "descriptors":
-    descriptors()
-
-noinline func descriptors():
     assert(descriptor_id_from_string(AtRuleId.function, ak.sv("--x")) == DescriptorId.custom)
     assert(descriptor_id_from_string(AtRuleId.font_face, ak.sv("--x")) == none)
     assert(descriptor_id_from_string(AtRuleId.page, ak.sv("MARGIN-TOP")) == DescriptorId.margin_top)
@@ -201,9 +166,6 @@ noinline func descriptors():
     assert(ak.fly_string_eq_string_view(&at_rule_name, ak.sv("@counter-style")))
 
 test "media features, pseudo-classes, pseudo-elements and transform functions":
-    selectors_and_features()
-
-noinline func selectors_and_features():
     assert(media_feature_id_from_string(ak.sv("HOVER")) == MediaFeatureId.hover)
     assert(media_feature_accepts_keyword(MediaFeatureId.hover, Keyword.none_))
     assert(media_feature_keyword_is_falsey(MediaFeatureId.hover, Keyword.none_))
@@ -224,9 +186,6 @@ noinline func selectors_and_features():
     assert(math_function_from_string(ak.sv("CALC")) == MathFunction.calc)
 
 test "units":
-    units()
-
-noinline func units():
     assert(dimension_for_unit(ak.sv("KHZ")) == DimensionType.frequency)
     assert(dimension_for_unit(ak.sv("")) == none)
     assert(string_to_length_unit(ak.sv("Q")) == LengthUnit.q)
@@ -243,9 +202,6 @@ noinline func units():
     assert(ak.fly_string_eq_string_view(&name, ak.sv("kHz")))
 
 test "traits hash enums as AK does":
-    enum_traits()
-
-noinline func enum_traits():
     var property_traits: PropertyIdTraits
     let property_id = PropertyId.margin_top
     assert(property_traits.hash_of(&property_id) == ak.u32_hash(282))
