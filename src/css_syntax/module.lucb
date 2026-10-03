@@ -14,8 +14,8 @@
 #==============================================================================================
 
 # Module-wide imports (imports apply to every fragment of the module, language §16.1).
-import ak
-import text_codec
+import luce_browser_foundation.ak
+import luce_browser_foundation.text_codec
 import luce
 import io
-import math
+import luce_std.math

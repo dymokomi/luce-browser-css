@@ -24,15 +24,15 @@ check() {
 }
 
 for module in css_syntax css_data; do
-    check "src/luce_browser_css/$module"
+    check "src/$module"
 done
 
 # Unit tests (TestCSSTokenStream, the CSS tokenizer corpora of tests/, TestCSSIDSpeed,
 # TestCSSInheritedProperty, focused cases), run from the package root because the corpus tests
 # read tests/css_tokenizer*.
 for module in css_syntax css_data; do
-    echo "== luce-base test src/luce_browser_css/$module"
-    luce-base test "src/luce_browser_css/$module"
+    echo "== luce-base test src/$module"
+    luce-base test "src/$module"
 done
 
 mkdir -p build tests/build
@@ -43,9 +43,9 @@ echo "== tools/gen_css: regenerate css_data's generated fragments and compare"
 luce-base build tools/gen_css -o build/gen_css
 build/gen_css data/css "$generated"
 for file in "$generated"/*.lucb; do
-    cmp "$file" "src/luce_browser_css/css_data/$(basename "$file")"
+    cmp "$file" "src/css_data/$(basename "$file")"
 done
-for file in src/luce_browser_css/css_data/generated_*.lucb; do
+for file in src/css_data/generated_*.lucb; do
     [ -f "$generated/$(basename "$file")" ] || { echo "$file is not generated any more"; exit 1; }
 done
 
