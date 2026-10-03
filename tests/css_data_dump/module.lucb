@@ -17,10 +17,10 @@
 #
 #==============================================================================================
 
-import luce_browser_foundation.ak
+from luce_browser_foundation import ak
 import c
-import luce_browser_css.css_data
-import luce_std.files
+from luce_browser_css import css_data
+from luce_std import files
 import io
 import strings
 
