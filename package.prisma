@@ -10,7 +10,7 @@ def package "luce-browser-css" {
 
     def dependency "luce-std" {
         str owner = "dymokomi"
-        str version = "^0.2.0"
+        str version = "^0.3.2"
         str path = "../luce-std"
     }
 

@@ -30,10 +30,11 @@ pub func main(arguments: c.str[]) -> i32!:
         print("usage: css_data_dump INPUTS_FILE")
         return 2
     let inputs = try files.read(arguments[1])
+    defer inputs.release()
     var out = try Out.create()
     try dump_enums(&out)
     try dump_keywords(&out)
-    try dump_inputs(&out, inputs)
+    try dump_inputs(&out, inputs.value)
     try dump_properties(&out)
     try dump_descriptors(&out)
     try dump_small(&out)
