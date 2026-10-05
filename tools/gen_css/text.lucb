@@ -251,7 +251,7 @@ struct StrList:
     var items: str[]
     var count: usize
 
-    func create() -> StrList!:
+    static func create() -> StrList!:
         return StrList(items = try new str[16], count = 0)
 
     func append(value: str) -> !:
@@ -282,7 +282,7 @@ struct StrListMap:
     var keys: StrList
     var values: (StrList*?)[]
 
-    func create() -> StrListMap!:
+    static func create() -> StrListMap!:
         return StrListMap(keys = try StrList.create(), values = try new (StrList*?)[16])
 
     ## The list of `key`, created empty when there is none (`setdefault`).
@@ -324,7 +324,7 @@ func sort_strings(list: StrList*):
 struct Out:
     var builder: strings.Builder
 
-    func create() -> Out!:
+    static func create() -> Out!:
         return Out(builder = try strings.Builder.create(1 << 16))
 
     ## Append `text`.

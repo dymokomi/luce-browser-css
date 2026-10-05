@@ -48,7 +48,7 @@ pub func main(arguments: c.str[]) -> i32!:
 struct Out:
     var builder: strings.Builder
 
-    func create() -> Out!:
+    static func create() -> Out!:
         return Out(builder = try strings.Builder.create(1 << 20))
 
     ## Append `text`.
