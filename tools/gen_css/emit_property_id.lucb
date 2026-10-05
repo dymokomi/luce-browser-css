@@ -244,7 +244,7 @@ func emit_property_id_1(data: PropertyData*) -> str!:
             if let legacy_alias_for = properties.at(index).get("legacy-alias-for"):
                 target = legacy_alias_for.string()
             let key = try camel_casify(name) if camel else name
-            try out.line(f"        discard(ak.hash_map_set(table, {try string_view_literal(key)}, {try property_id_value(target)}))")
+            try out.line(f"        _ = ak.hash_map_set(table, {try string_view_literal(key)}, {try property_id_value(target)})")
         try out.line(f"    {table}_initialized = true")
         try out.line(f"    return &{table}")
         try out.blank()

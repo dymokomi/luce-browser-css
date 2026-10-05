@@ -173,7 +173,7 @@ func tokenizer_tokenize_filter_code_points(input: ak.StringView, encoding: ak.St
     let end = ak.utf8_view_end(&decoded_code_points)
     while not ak.utf8_code_point_iterator_eq(&it, &end):
         let code_point = ak.utf8_code_point_iterator_deref(&it)
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         if code_point == (u32)'\r' or code_point == 0x0c or code_point == 0x00 or ak.is_unicode_surrogate(code_point):
             contains_filterable = true
             break
@@ -187,7 +187,7 @@ func tokenizer_tokenize_filter_code_points(input: ak.StringView, encoding: ak.St
     it = ak.utf8_view_begin(&decoded_code_points)
     while not ak.utf8_code_point_iterator_eq(&it, &end):
         let code_point = ak.utf8_code_point_iterator_deref(&it)
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         # Replace any U+000D CARRIAGE RETURN (CR) code points,
         # U+000C FORM FEED (FF) code points,
         # or pairs of U+000D CARRIAGE RETURN (CR) followed by U+000A LINE FEED (LF)
@@ -251,7 +251,7 @@ pub func tokenizer_next_code_point(this: Tokenizer*) -> u32:
     if ak.utf8_code_point_iterator_eq(&this.m_utf8_iterator, &end):
         return tokenizer_eof
     this.m_prev_utf8_iterator = this.m_utf8_iterator
-    discard(ak.utf8_code_point_iterator_inc(&this.m_utf8_iterator))
+    _ = ak.utf8_code_point_iterator_inc(&this.m_utf8_iterator)
     let code_point = ak.utf8_code_point_iterator_deref(&this.m_prev_utf8_iterator)
 
     this.m_prev_position = this.m_position
@@ -271,7 +271,7 @@ pub func tokenizer_peek_code_point(this: const Tokenizer*, offset: usize = 0) ->
     let end = ak.utf8_view_end(&this.m_utf8_view)
     var i: usize = 0
     while i < offset and not ak.utf8_code_point_iterator_eq(&it, &end):
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         i += 1
     if ak.utf8_code_point_iterator_eq(&it, &end):
         return tokenizer_eof
@@ -287,7 +287,7 @@ pub func tokenizer_peek_twin(this: const Tokenizer*) -> U32Twin:
     var i: usize = 0
     while i < 2 and not ak.utf8_code_point_iterator_eq(&it, &end):
         u32_twin_set(&values, i, ak.utf8_code_point_iterator_deref(&it))
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         i += 1
     if css_tokenizer_debug:
         ak.dbgln(f"(Tokenizer) Peek twin: {values.first},{values.second}")
@@ -301,7 +301,7 @@ pub func tokenizer_peek_triplet(this: const Tokenizer*) -> U32Triplet:
     var i: usize = 0
     while i < 3 and not ak.utf8_code_point_iterator_eq(&it, &end):
         u32_triplet_set(&values, i, ak.utf8_code_point_iterator_deref(&it))
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         i += 1
     if css_tokenizer_debug:
         ak.dbgln(f"(Tokenizer) Peek triplet: {values.first},{values.second},{values.third}")
@@ -364,7 +364,7 @@ pub func tokenizer_consume_escaped_code_point(this: Tokenizer*) -> u32:
 
         # If the next input code point is whitespace, consume it as well.
         if is_whitespace(tokenizer_peek_code_point(this)):
-            discard(tokenizer_next_code_point(this))
+            _ = tokenizer_next_code_point(this)
 
         # Interpret the hex digits as a hexadecimal number.
         let unhexed = ak.parse_hexadecimal_number_string_view_u32(ak.string_builder_string_view(&builder)) else 0
@@ -399,7 +399,7 @@ pub func tokenizer_consume_an_ident_like_token(this: Tokenizer*) -> Token:
     # If string’s value is an ASCII case-insensitive match for "url", and the next input code
     # point is U+0028 LEFT PARENTHESIS ((), consume it.
     if ak.fly_string_equals_ignoring_ascii_case_string_view(&string, ak.sv("url")) and is_left_paren(tokenizer_peek_code_point(this)):
-        discard(tokenizer_next_code_point(this))
+        _ = tokenizer_next_code_point(this)
 
         # While the next two input code points are whitespace, consume the next input code point.
         while true:
@@ -407,7 +407,7 @@ pub func tokenizer_consume_an_ident_like_token(this: Tokenizer*) -> Token:
             if not (is_whitespace(maybe_whitespace.first) and is_whitespace(maybe_whitespace.second)):
                 break
 
-            discard(tokenizer_next_code_point(this))
+            _ = tokenizer_next_code_point(this)
 
         # If the next one or two input code points are U+0022 QUOTATION MARK ("), U+0027 APOSTROPHE ('),
         # or whitespace followed by U+0022 QUOTATION MARK (") or U+0027 APOSTROPHE ('), then create a
@@ -421,7 +421,7 @@ pub func tokenizer_consume_an_ident_like_token(this: Tokenizer*) -> Token:
 
     # Otherwise, if the next input code point is U+0028 LEFT PARENTHESIS ((), consume it.
     if is_left_paren(tokenizer_peek_code_point(this)):
-        discard(tokenizer_next_code_point(this))
+        _ = tokenizer_next_code_point(this)
 
         # Create a <function-token> with its value set to string and return it.
         return token_create_function(string, tokenizer_input_since(this, start_byte_offset))
@@ -518,7 +518,7 @@ pub func tokenizer_consume_a_number(this: Tokenizer*) -> Number:
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:526 Web::CSS::Parser::Tokenizer::convert_a_string_to_a_number.
 # https://www.w3.org/TR/css-syntax-3/#convert-string-to-number
 pub func tokenizer_convert_a_string_to_a_number(this: Tokenizer*, string: ak.StringView) -> f64:
-    discard(this)
+    _ = this
     # FIXME: We already found the whole part, fraction part and exponent during
     #        validation, we could probably skip
     return ak.string_view_to_number_f64(&string, ak.TrimWhitespace.no) else trap("release_value: not a number")

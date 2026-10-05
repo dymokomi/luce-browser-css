@@ -54,13 +54,13 @@ func at_rule_for_each_report_at_rule(context: void*?, at_rule: const AtRule*):
 
 ## The lambda that reports a nested qualified rule.
 func at_rule_for_each_report_qualified_rule(context: void*?, qualified_rule: const QualifiedRule*):
-    discard(qualified_rule)
+    _ = qualified_rule
     let captures = (AtRuleForEachReportCaptures*)(context else trap("no captures"))
     report_invalid_rule_location(at_rule_name_for_error(captures.this.name), ak.fly_string_from_str("qualified-rule"))
 
 ## The lambda that reports a nested list of declarations.
 func at_rule_for_each_report_declaration(context: void*?, declaration: const Declaration*):
-    discard(declaration)
+    _ = declaration
     let captures = (AtRuleForEachReportCaptures*)(context else trap("no captures"))
     report_invalid_rule_location(at_rule_name_for_error(captures.this.name), ak.fly_string_from_str("list-of-declarations"))
 
@@ -218,10 +218,10 @@ pub func function_eq(this: const Function*, other: Function) -> bool:
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Types.h:105 Web::CSS::Parser::GuaranteedInvalidValue::to_string.
 pub func guaranteed_invalid_value_to_string(this: const GuaranteedInvalidValue*) -> ak.String:
-    discard(this)
+    _ = this
     return ak.string_new()
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Types.h:106 Web::CSS::Parser::GuaranteedInvalidValue::original_source_text.
 pub func guaranteed_invalid_value_original_source_text(this: const GuaranteedInvalidValue*) -> ak.String:
-    discard(this)
+    _ = this
     return ak.string_new()

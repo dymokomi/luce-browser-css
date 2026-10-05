@@ -53,11 +53,11 @@ pub func tokenizer_consume_a_url_token(this: Tokenizer*, start_byte_offset: usiz
             input = tokenizer_peek_code_point(this)
 
             if is_right_paren(input):
-                discard(tokenizer_next_code_point(this))
+                _ = tokenizer_next_code_point(this)
                 return token_create_url(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, start_byte_offset))
 
             if is_eof(input):
-                discard(tokenizer_next_code_point(this))
+                _ = tokenizer_next_code_point(this)
                 log_parse_error()
                 return token_create_url(ak.string_builder_to_fly_string_without_validation(&builder), tokenizer_input_since(this, start_byte_offset))
 
@@ -116,7 +116,7 @@ pub func tokenizer_consume_the_remnants_of_a_bad_url(this: Tokenizer*):
             # Consume an escaped code point.
             # This allows an escaped right parenthesis ("\)") to be encountered without ending
             # the <bad-url-token>. This is otherwise identical to the "anything else" clause.
-            discard(tokenizer_consume_escaped_code_point(this))
+            _ = tokenizer_consume_escaped_code_point(this)
 
 # anything else
 # Do nothing.
@@ -124,7 +124,7 @@ pub func tokenizer_consume_the_remnants_of_a_bad_url(this: Tokenizer*):
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:703 Web::CSS::Parser::Tokenizer::consume_as_much_whitespace_as_possible.
 pub func tokenizer_consume_as_much_whitespace_as_possible(this: Tokenizer*):
     while is_whitespace(tokenizer_peek_code_point(this)):
-        discard(tokenizer_next_code_point(this))
+        _ = tokenizer_next_code_point(this)
 
 ## Ported from Libraries/LibWeb/CSS/Parser/Tokenizer.cpp:710 Web::CSS::Parser::Tokenizer::reconsume_current_input_code_point.
 pub func tokenizer_reconsume_current_input_code_point(this: Tokenizer*):
@@ -159,7 +159,7 @@ pub func tokenizer_consume_a_numeric_token(this: Tokenizer*) -> Token:
 
     # Otherwise, if the next input code point is U+0025 PERCENTAGE SIGN (%), consume it.
     if is_percent(tokenizer_peek_code_point(this)):
-        discard(tokenizer_next_code_point(this))
+        _ = tokenizer_next_code_point(this)
 
         # Create a <percentage-token> with the same value as number, and return it.
         return token_create_percentage(number, tokenizer_input_since(this, start_byte_offset))
@@ -316,7 +316,7 @@ pub func tokenizer_consume_string_token(this: Tokenizer*, ending_code_point: u32
 
             # Otherwise, if the next input code point is a newline, consume it.
             if is_newline(next_input):
-                discard(tokenizer_next_code_point(this))
+                _ = tokenizer_next_code_point(this)
                 continue
 
             # Otherwise, (the stream starts with a valid escape) consume an escaped code
@@ -348,8 +348,8 @@ pub func tokenizer_consume_comments(this: Tokenizer*):
         if not (is_solidus(twin.first) and is_asterisk(twin.second)):
             return
 
-        discard(tokenizer_next_code_point(this))
-        discard(tokenizer_next_code_point(this))
+        _ = tokenizer_next_code_point(this)
+        _ = tokenizer_next_code_point(this)
 
         while true:
             let twin_inner = tokenizer_peek_twin(this)
@@ -358,8 +358,8 @@ pub func tokenizer_consume_comments(this: Tokenizer*):
                 return
 
             if is_asterisk(twin_inner.first) and is_solidus(twin_inner.second):
-                discard(tokenizer_next_code_point(this))
-                discard(tokenizer_next_code_point(this))
+                _ = tokenizer_next_code_point(this)
+                _ = tokenizer_next_code_point(this)
                 continue start
 
-            discard(tokenizer_next_code_point(this))
+            _ = tokenizer_next_code_point(this)

@@ -38,7 +38,7 @@ pub func serialize_an_identifier_string_builder(builder: ak.StringBuilder*, iden
     let end = ak.utf8_view_end(&characters)
     while not ak.utf8_code_point_iterator_eq(&it, &end):
         let character = ak.utf8_code_point_iterator_deref(&it)
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         # If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
         if character == 0:
             ak.string_builder_append_code_point(builder, 0xfffd)
@@ -84,7 +84,7 @@ pub func serialize_a_string_string_builder(builder: ak.StringBuilder*, string: a
     let end = ak.utf8_view_end(&characters)
     while not ak.utf8_code_point_iterator_eq(&it, &end):
         let character = ak.utf8_code_point_iterator_deref(&it)
-        discard(ak.utf8_code_point_iterator_inc(&it))
+        _ = ak.utf8_code_point_iterator_inc(&it)
         # If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
         if character == 0:
             ak.string_builder_append_code_point(builder, 0xfffd)

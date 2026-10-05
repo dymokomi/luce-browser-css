@@ -127,8 +127,8 @@ pub func tokenizer_consume_a_token(this: Tokenizer*) -> Token:
         # GREATER-THAN SIGN (->), consume them and return a <CDC-token>.
         let next_twin = tokenizer_peek_twin(this)
         if is_hyphen_minus(next_twin.first) and is_greater_than_sign(next_twin.second):
-            discard(tokenizer_next_code_point(this))
-            discard(tokenizer_next_code_point(this))
+            _ = tokenizer_next_code_point(this)
+            _ = tokenizer_next_code_point(this)
 
             return token_create(TokenType.cdc, tokenizer_input_since(this, start_byte_offset))
 
@@ -176,9 +176,9 @@ pub func tokenizer_consume_a_token(this: Tokenizer*) -> Token:
         # U+002D HYPHEN-MINUS (!--), consume them and return a <CDO-token>.
         let maybe_cdo = tokenizer_peek_triplet(this)
         if is_exclamation_mark(maybe_cdo.first) and is_hyphen_minus(maybe_cdo.second) and is_hyphen_minus(maybe_cdo.third):
-            discard(tokenizer_next_code_point(this))
-            discard(tokenizer_next_code_point(this))
-            discard(tokenizer_next_code_point(this))
+            _ = tokenizer_next_code_point(this)
+            _ = tokenizer_next_code_point(this)
+            _ = tokenizer_next_code_point(this)
 
             return token_create(TokenType.cdo, tokenizer_input_since(this, start_byte_offset))
 

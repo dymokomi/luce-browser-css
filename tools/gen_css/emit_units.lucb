@@ -256,7 +256,7 @@ func format_ratio(text: str) -> str!:
             continue
         leading = false
         let one: u8[1] = [byte]
-        discard(try digits.write(one))
+        _ = try digits.write(one)
         if not seen_point:
             point += 1
     let all = digits.view()

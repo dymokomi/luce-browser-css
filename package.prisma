@@ -1,7 +1,7 @@
 #prisma 4.0
 def package "luce-browser-css" {
     str owner = "dymokomi"
-    str version = "0.2.1"
+    str version = "0.3.0"
     str kind = "package"
     str language = "luce-base"
     str description = "CSS Syntax Level 3 below the object model (tokenizer, tokens, component values) and the generated CSS data tables, from Ladybird's LibWeb, in luce-base."
@@ -10,13 +10,13 @@ def package "luce-browser-css" {
 
     def dependency "luce-std" {
         str owner = "dymokomi"
-        str version = "^0.3.2"
+        str version = "^0.4.0"
         str path = "../luce-std"
     }
 
     def dependency "luce-browser-foundation" {
         str owner = "dymokomi"
-        str version = "^0.2.0"
+        str version = "^0.3.0"
         str path = "../luce-browser-foundation"
     }
 }

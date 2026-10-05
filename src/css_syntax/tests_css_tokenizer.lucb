@@ -23,7 +23,7 @@ extern func fclose(stream: void*) -> i32
 ## The bytes of the file at `path` (a NUL-terminated path), or none when it cannot be opened.
 func read_test_file(path: const u8*) -> u8[]?:
     let stream = fopen(path, "rb".bytes.data) else return none
-    defer discard(fclose(stream))
+    defer _ = fclose(stream)
     var data = new u8[1 << 12] else trap("out of memory")
     var used: usize = 0
     while true:

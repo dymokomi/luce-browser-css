@@ -214,8 +214,8 @@ noinline func test_component_value_stream():
     if true:
         var transaction = token_stream_begin_transaction(&stream)
         defer state_transaction_destroy(&transaction)
-        discard(token_stream_consume_a_token(&stream))
-        discard(token_stream_consume_a_token(&stream))
+        _ = token_stream_consume_a_token(&stream)
+        _ = token_stream_consume_a_token(&stream)
         assert(token_stream_current_index(&stream) == 3)
     assert(token_stream_current_index(&stream) == 1)
 
@@ -223,10 +223,10 @@ noinline func test_component_value_stream():
     if true:
         var transaction = token_stream_begin_transaction(&stream)
         defer state_transaction_destroy(&transaction)
-        discard(token_stream_consume_a_token(&stream))
+        _ = token_stream_consume_a_token(&stream)
         var child = state_transaction_create_child(&transaction)
         defer state_transaction_destroy(&child)
-        discard(token_stream_consume_a_token(&stream))
+        _ = token_stream_consume_a_token(&stream)
         state_transaction_commit(&child)
     assert(token_stream_current_index(&stream) == 3)
     assert(token_stream_tokens_since(&stream, 0).length == 3)

@@ -133,7 +133,7 @@ func emit_keyword(keyword_data: const Json*) -> str!:
     try out.line("        let table = &g_stringview_to_keyword_map")
     for index in 0..<keyword_data.count:
         let name = keyword_data.at(index).string()
-        try out.line(f"        discard(ak.hash_map_set(table, {try string_view_literal(name)}, {try enum_value("Keyword", try keyword_name(name))}))")
+        try out.line(f"        _ = ak.hash_map_set(table, {try string_view_literal(name)}, {try enum_value("Keyword", try keyword_name(name))})")
     try out.line("    g_stringview_to_keyword_map_initialized = true")
     try out.line("    return &g_stringview_to_keyword_map")
     try out.blank()

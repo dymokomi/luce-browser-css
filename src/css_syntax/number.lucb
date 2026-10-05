@@ -91,7 +91,7 @@ pub func number_div(this: const Number*, other: Number) -> Number:
 
 ## Ported from Libraries/LibWeb/CSS/Number.cpp:31 Web::CSS::Number::serialize.
 pub func number_serialize(this: const Number*, builder: ak.StringBuilder*, mode: SerializationMode = SerializationMode.normal):
-    discard(mode)
+    _ = mode
     if this.m_type == NumberType.integer_with_explicit_sign:
         string_builder_appendff(builder, "{:+}", [ak.arg_f64(this.m_value)])
         return

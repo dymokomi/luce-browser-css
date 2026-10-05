@@ -39,7 +39,7 @@ pub func main(arguments: c.str[]) -> i32!:
     try dump_descriptors(&out)
     try dump_small(&out)
     try dump_units(&out)
-    discard(try io.stdout().write(out.builder.view().bytes))
+    _ = try io.stdout().write(out.builder.view().bytes)
     return 0
 
 # mark: Output ==================================================================================
@@ -48,23 +48,23 @@ pub func main(arguments: c.str[]) -> i32!:
 struct Out:
     var builder: strings.Builder
 
-    static func create() -> Out!:
+    func create() -> Out!:
         return Out(builder = try strings.Builder.create(1 << 20))
 
     ## Append `text`.
-    mutating func p(text: fmt) -> !:
-        discard(try self.builder.write(text))
+    func p(text: fmt) -> !:
+        _ = try self.builder.write(text)
 
     ## Append a StringView.
-    mutating func view(text: ak.StringView) -> !:
-        discard(try self.builder.write(ak.string_view_bytes(&text)))
+    func view(text: ak.StringView) -> !:
+        _ = try self.builder.write(ak.string_view_bytes(&text))
 
     ## Append a FlyString.
-    mutating func fly(text: ak.FlyString) -> !:
+    func fly(text: ak.FlyString) -> !:
         try self.view(ak.fly_string_bytes_as_string_view(&text))
 
     ## Append `1` or `0`.
-    mutating func b(value: bool) -> !:
+    func b(value: bool) -> !:
         try self.builder.put("1" if value else "0")
 
 ## Append an optional enum value as its integer, or `-`.

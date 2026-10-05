@@ -143,7 +143,7 @@ pub func token_stream_restore_a_mark[T](this: TokenStream[T]*):
 # https://drafts.csswg.org/css-syntax/#token-stream-discard-a-mark
 pub func token_stream_discard_a_mark[T](this: TokenStream[T]*):
     # Pop from marked indexes, and do nothing with the popped value.
-    discard(ak.vector_take_last(&this.m_marked_indexes))
+    _ = ak.vector_take_last(&this.m_marked_indexes)
 
 ## Ported from Libraries/LibWeb/CSS/Parser/TokenStream.h:142 Web::CSS::Parser::TokenStream::discard_whitespace.
 # https://drafts.csswg.org/css-syntax/#token-stream-discard-whitespace

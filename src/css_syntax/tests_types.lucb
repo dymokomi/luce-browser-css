@@ -33,7 +33,7 @@ func record_at_rule(context: void*?, at_rule: const AtRule*):
     ak.string_builder_append_u8(&visits.at_rules, ';')
 
 func record_qualified_rule(context: void*?, qualified_rule: const QualifiedRule*):
-    discard(qualified_rule)
+    _ = qualified_rule
     let visits = (RuleVisits*)(context else trap("no visits"))
     visits.qualified_rules += 1
 
