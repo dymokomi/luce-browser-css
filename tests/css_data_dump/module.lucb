@@ -20,9 +20,8 @@
 from luce_browser_foundation import ak
 import c
 from luce_browser_css import css_data
-from luce_std import files
+from luce_std import collections, files
 import io
-import strings
 
 ## Print the dump for the inputs of `arguments[1]`.
 pub func main(arguments: c.str[]) -> i32!:
@@ -39,17 +38,17 @@ pub func main(arguments: c.str[]) -> i32!:
     try dump_descriptors(&out)
     try dump_small(&out)
     try dump_units(&out)
-    _ = try io.stdout().write(out.builder.view().bytes)
+    _ = try io.stdout().write(out.builder.view())
     return 0
 
 # mark: Output ==================================================================================
 
 ## The text of the dump.
 struct Out:
-    var builder: strings.Builder
+    var builder: collections.Buffer
 
     static func create() -> Out!:
-        return Out(builder = try strings.Builder.create(1 << 20))
+        return Out()
 
     ## Append `text`.
     func p(text: fmt) -> !:
@@ -65,7 +64,7 @@ struct Out:
 
     ## Append `1` or `0`.
     func b(value: bool) -> !:
-        try self.builder.put("1" if value else "0")
+        try self.builder.put_text("1" if value else "0")
 
 ## Append an optional enum value as its integer, or `-`.
 func put_optional(out: Out*, value: u64?) -> !:

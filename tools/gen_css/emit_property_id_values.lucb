@@ -166,15 +166,15 @@ func emit_property_id_2(data: PropertyData*) -> str!:
                 trap(f"Bad custom-ident parameters: {parameters_string}")
             let keywords = slice(parameters_string, 2, parameters_string.length - 1)
             try out.line(f"        {try property_case(properties.key(index))}:")
-            var list = try strings.Builder.create()
+            var list: collections.Buffer
             var keyword_parts = try strings.SplitIterator.over(keywords, ",")
             var first = true
             while let keyword = keyword_parts.next():
                 if not first:
-                    try list.put(", ")
-                try list.put(try string_view_literal(keyword))
+                    try list.put_text(", ")
+                try list.put_text(try string_view_literal(keyword))
                 first = false
-            try out.line(f"            ak.vector_construct_opaque(&blacklist, [{list.view()}])")
+            try out.line(f"            ak.vector_construct_opaque(&blacklist, [{list.text()}])")
             try out.line("            return blacklist")
     try out.line("        _: return blacklist")
     try out.blank()
@@ -234,16 +234,16 @@ func generate_bounds_checking_function(out: Out*, properties: const Json*, css_t
             if min_value_string.length == 0 and max_value_string.length == 0:
                 try out.line(f"        {case_text}: return true")
                 break
-            var condition = try strings.Builder.create()
+            var condition: collections.Buffer
             if min_value_string.length > 0:
-                try condition.put("value >= ")
-                try condition.put(try bound_literal(min_value_string, type_name))
+                try condition.put_text("value >= ")
+                try condition.put_text(try bound_literal(min_value_string, type_name))
             if max_value_string.length > 0:
                 if min_value_string.length > 0:
-                    try condition.put(" and ")
-                try condition.put("value <= ")
-                try condition.put(try bound_literal(max_value_string, type_name))
-            try out.line(f"        {case_text}: return {condition.view()}")
+                    try condition.put_text(" and ")
+                try condition.put_text("value <= ")
+                try condition.put_text(try bound_literal(max_value_string, type_name))
+            try out.line(f"        {case_text}: return {condition.text()}")
             break
     try out.line("        _: return false")
     try out.blank()

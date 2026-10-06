@@ -232,7 +232,7 @@ func format_ratio(text: str) -> str!:
     # that read back as the same double.
     var buffer: u8[64]
     let exact = try strings.format_f64(value, buffer)
-    var digits = try strings.Builder.create()
+    var digits: collections.Buffer
     var point: isize = 0
     var seen_point = false
     var leading = true
@@ -259,7 +259,7 @@ func format_ratio(text: str) -> str!:
         _ = try digits.write(one)
         if not seen_point:
             point += 1
-    let all = digits.view()
+    let all = digits.text()
     if all.length == 0:
         return "0.0"
     for count in 1..=all.length:
@@ -297,23 +297,23 @@ func round_digits(digits: str, count: usize, point: isize) -> str!:
     while end > start + 1 and kept[end - 1] == '0':
         end -= 1
     let significant = (str)kept[start..<end]
-    var out = try strings.Builder.create()
+    var out: collections.Buffer
     if position <= 0:
-        try out.put("0.")
+        try out.put_text("0.")
         var zeros = position
         while zeros < 0:
-            try out.put("0")
+            try out.put_text("0")
             zeros += 1
-        try out.put(significant)
+        try out.put_text(significant)
     elif (usize)position >= significant.length:
-        try out.put(significant)
+        try out.put_text(significant)
         var zeros = (usize)position - significant.length
         while zeros > 0:
-            try out.put("0")
+            try out.put_text("0")
             zeros -= 1
-        try out.put(".0")
+        try out.put_text(".0")
     else:
-        try out.put(slice(significant, 0, (usize)position))
-        try out.put(".")
-        try out.put(slice(significant, (usize)position, significant.length))
-    return out.view()
+        try out.put_text(slice(significant, 0, (usize)position))
+        try out.put_text(".")
+        try out.put_text(slice(significant, (usize)position, significant.length))
+    return out.text()
