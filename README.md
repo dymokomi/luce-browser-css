@@ -27,11 +27,11 @@ generators, from Ladybird's JSON files in `data/css` (see `docs/regions/r12c.md`
 
 ## Testing
 
-`./test.sh` type-checks every module and runs the unit tests of `css_syntax` (the CSS tokenizer
-corpora in `tests/`, TestCSSTokenStream and focused cases) and `css_data`. It also regenerates
-`css_data`'s generated fragments and compares them with the committed ones, and compares
-everything `css_data` answers with a dump of Ladybird's generated C++ (`tests/css_data_dump`,
-`tests/data/`).
+`luc test` runs the unit tests of `css_syntax` (the CSS tokenizer corpora in `tests/`,
+TestCSSTokenStream and focused cases) and `css_data`, and two programs: `tests/generated`
+regenerates `css_data`'s generated fragments and compares them with the committed ones, and
+`tests/css_data_dump` compares everything `css_data` answers with a dump of Ladybird's
+generated C++ (its `expected`). `tools/check.sh` is the lint: formatting and `-W`.
 
 ## License
 

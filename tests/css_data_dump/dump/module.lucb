@@ -1,16 +1,15 @@
 #==============================================================================================
 #
-#   css_data_dump - every answer of css_data, as text
+#   dump - every answer of css_data, as text
 #
 #   DESCRIPTION:
 #       Prints what each generated css_data function answers for every enum value, every
-#       pair that the functions take, and every input string of tests/data/css_data_inputs.txt
+#       pair that the functions take, and every input string of tests/css_data_dump/inputs.txt
 #       (the names of every JSON input, cased three ways, and some strings that are no name).
-#       tests/data/css_data_dump.txt is the same dump printed by a local C++ program over
-#       Ladybird's generated Build/Libraries/LibWeb/CSS/*.cpp at 47c82b38d0; test.sh compares
-#       the two byte for byte, so this program pins css_data to the donor's generated code.
-#
-#       Usage: css_data_dump INPUTS_FILE > DUMP
+#       tests/css_data_dump/expected is the same dump printed by a local C++ program over
+#       Ladybird's generated Build/Libraries/LibWeb/CSS/*.cpp at 47c82b38d0; `luc test`
+#       compares the program's output with it byte for byte, so css_data is pinned to the
+#       donor's generated code.
 #
 #       Copyright (c) 2026 the luce-browser authors.
 #       SPDX-License-Identifier: BSD-2-Clause (see LICENSE)
@@ -23,12 +22,9 @@ from luce_browser_css import css_data
 from luce_std import collections, files
 import io
 
-## Print the dump for the inputs of `arguments[1]`.
-pub func main(arguments: c.str[]) -> i32!:
-    if arguments.length != 2:
-        print("usage: css_data_dump INPUTS_FILE")
-        return 2
-    let inputs = try files.read(arguments[1])
+## Print the dump for the inputs in the file `path`.
+pub func print_dump(path: c.str) -> i32!:
+    let inputs = try files.read(path)
     defer inputs.release()
     var out = try Out.create()
     try dump_enums(&out)

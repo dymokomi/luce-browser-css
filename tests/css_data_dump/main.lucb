@@ -1,0 +1,17 @@
+#==============================================================================================
+#
+#   tests/css_data_dump - css_data against the donor's generated C++
+#
+#   DESCRIPTION:
+#       Prints the dump (dump/) for inputs.txt; `luc test` compares it byte for byte with
+#       `expected`, printed by Ladybird's generated C++ (47c82b38d0) for the same inputs.
+#
+#       Copyright (c) 2026 the luce-browser authors.
+#       SPDX-License-Identifier: BSD-2-Clause (see LICENSE)
+#
+#==============================================================================================
+
+import dump
+
+pub func main(arguments: str[]) -> i32!:
+    return try dump.print_dump("tests/css_data_dump/inputs.txt")
